@@ -13,10 +13,20 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || 'file:../database/utsavora.db',
   jwtSecret: process.env.JWT_SECRET || 'utsavora-dev-jwt-super-secret-key-32chars-min',
   refreshSecret: process.env.REFRESH_SECRET || 'utsavora-dev-refresh-super-secret-key-32chars-min',
+  adminPassword: process.env.ADMIN_PASSWORD || 'Admin@12345',
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4173,null')
     .split(',')
-    .map(s => s.trim()),
-  uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '../uploads'),
+    .map(s => s.trim())
+    .filter(Boolean),
+  allowFileOrigin: process.env.ALLOW_FILE_ORIGIN === 'true',
+  uploadDir: process.env.UPLOAD_DIR
+    ? path.resolve(__dirname, '..', process.env.UPLOAD_DIR)
+    : path.resolve(__dirname, '../uploads'),
+  storageProvider: process.env.STORAGE_PROVIDER || 'local',
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
+  cloudinaryFolder: process.env.CLOUDINARY_FOLDER || 'utsavora',
   paymentProvider: process.env.PAYMENT_PROVIDER || 'mock',
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',
@@ -27,5 +37,12 @@ export const config = {
   gstPercent: parseInt(process.env.GST_PERCENT || '18', 10),
   warningLimit: 3,
   maxBranchPhotos: parseInt(process.env.MAX_BRANCH_PHOTOS || '12', 10),
-  maxPhotoSizeBytes: parseInt(process.env.MAX_PHOTO_SIZE_BYTES || String(8 * 1024 * 1024), 10)
+  maxPhotoSizeBytes: parseInt(process.env.MAX_PHOTO_SIZE_BYTES || String(8 * 1024 * 1024), 10),
+  rateLimitLoginMax: parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '30', 10),
+  rateLimitLoginWindowMs: parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_MS || String(15 * 60 * 1000), 10),
+  rateLimitApiMax: parseInt(process.env.RATE_LIMIT_API_MAX || '500', 10),
+  rateLimitApiWindowMs: parseInt(process.env.RATE_LIMIT_API_WINDOW_MS || String(15 * 60 * 1000), 10),
+  seedMode: process.env.SEED_MODE || 'demo'
 };
+
+export default config;

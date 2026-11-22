@@ -6,10 +6,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
+const defaultSqliteUrl = `file:${path.resolve(rootDir, 'database/utsavora.db')}`;
+const activeDbUrl = process.env.DATABASE_URL || defaultSqliteUrl;
+
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: `file:${path.resolve(rootDir, 'database/utsavora.db')}`
+      url: activeDbUrl
     }
   }
 });

@@ -1,0 +1,44 @@
+name: Utsavora CI
+
+on:
+  push:
+    branches: [main, deploy-setup]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    name: Build, Validate & Test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm install
+
+      - name: Install Backend & Frontend Dependencies
+        run: |
+          npm install --prefix backend
+          npm install --prefix frontend
+
+      - name: Validate Database Schema Generator
+        run: |
+          node scripts/use-db.mjs sqlite --skip-generate
+          node scripts/use-db.mjs postgres --skip-generate
+          node scripts/use-db.mjs sqlite
+
+      - name: Run Code Integrity Check
+        run: npm run check
+
+      - name: Run Backend Isolated Test Suite
+        run: npm test --prefix backend
+
+      - name: Build Frontend & Production Distribution
+        run: npm run build

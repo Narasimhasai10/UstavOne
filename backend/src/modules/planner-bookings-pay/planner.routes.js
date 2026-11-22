@@ -6,8 +6,8 @@ import { plannerService } from "./planner.js";
 
 const router = Router();
 
-// POST /api/v1/plan - Calculate plan (stateless or logged-in)
-router.post("/", async (req, res, next) => {
+// POST /api/v1/planner or /api/v1/planner/calculate - Calculate plan (stateless or logged-in)
+const handleCalculatePlan = async (req, res, next) => {
   try {
     const input = req.body;
     const planResult = await plannerService.calculatePlan(input);
@@ -15,7 +15,10 @@ router.post("/", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.post("/", handleCalculatePlan);
+router.post("/calculate", handleCalculatePlan);
 
 // POST /api/v1/plans - Save plan for current user
 router.post("/save", requireAuth, async (req, res, next) => {

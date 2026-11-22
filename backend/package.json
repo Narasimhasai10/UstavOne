@@ -9,13 +9,17 @@
     "start": "node src/server.js",
     "db:migrate": "npx prisma migrate dev --schema ../database/schema.prisma",
     "db:push": "npx prisma db push --schema ../database/schema.prisma",
+    "db:deploy": "node ../scripts/db-deploy.mjs",
     "db:generate": "npx prisma generate --schema ../database/schema.prisma",
     "db:seed": "node ../database/seed.js",
+    "db:seed:prod": "node ../scripts/db-seed-prod.mjs",
     "test": "node tests/runner.js"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.11.0",
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

@@ -68,8 +68,16 @@ const DEMO_OWNER_NAMES = [
   'Kiran Varma', 'Mohan Rao', 'Narasimha Murthy', 'Praveen Kumar'
 ];
 
+export function maskDatabaseUrl(url) {
+  if (!url) return '(unspecified)';
+  try {
+    return url.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
+  } catch {
+    return url;
+  }
+}
+
 function generateSvgImage({ title, emoji, caption, filename, uploadsDir }) {
-  const filePath = path.join(uploadsDir, filename);
   const cleanTitle = (title || 'Utsavora Venue').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const cleanCaption = (caption || 'Verified Partner').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
@@ -86,19 +94,59 @@ function generateSvgImage({ title, emoji, caption, filename, uploadsDir }) {
   <text x="400" y="320" font-family="system-ui, sans-serif" font-size="26" font-weight="bold" fill="#F8EBD8" text-anchor="middle">${cleanTitle}</text>
   <text x="400" y="365" font-family="system-ui, sans-serif" font-size="16" fill="#E8B84A" text-anchor="middle">${cleanCaption}</text>
 </svg>`;
-  fs.writeFileSync(filePath, svg, 'utf8');
+
+  let savedPath = `/uploads/public/${filename}`;
+  if (uploadsDir) {
+    try {
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      fs.writeFileSync(path.join(uploadsDir, filename), svg, 'utf8');
+    } catch {
+      savedPath = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+  }
+
+  // Cloudinary fallback or container without persistent disk
+  if (process.env.STORAGE_PROVIDER === 'cloudinary' && (!process.env.CLOUDINARY_URL && !process.env.CLOUDINARY_CLOUD_NAME)) {
+    savedPath = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
   return {
-    path: `/uploads/public/${filename}`,
+    path: savedPath,
     sizeBytes: Buffer.byteLength(svg, 'utf8')
   };
 }
 
-export async function seedDatabase(targetPrisma = prisma) {
-  console.log('🌱 Starting database seeding...');
+export async function seedDatabase(targetPrisma = prisma, options = {}) {
+  const isDryRun = process.argv.includes('--dry-run') || Boolean(options?.dryRun);
+  const mode = options?.mode || process.env.SEED_MODE || 'demo';
+  const targetDb = process.env.DATABASE_URL || 'file:../database/utsavora.db';
+
+  console.log(`[DB] Target database: ${maskDatabaseUrl(targetDb)}`);
+
+  if (isDryRun) {
+    console.log(`🔍 [DRY RUN] Simulating database seed (mode: ${mode})...`);
+    console.log('  - Would seed/upsert planner configurations');
+    console.log('  - Would seed/upsert core cities and states');
+    console.log('  - Would upsert 3 customer accounts');
+    console.log('  - Would upsert platform administrator');
+    if (mode === 'minimal') {
+      console.log('  - [Minimal Mode] Would verify essential test vendor and branches only if needed');
+    } else {
+      console.log('  - [Demo Mode] Would seed full catalog, branches, sample bookings, and notifications');
+    }
+    console.log('✅ [DRY RUN] Simulation complete. No database changes were made.');
+    return;
+  }
+
+  console.log(`🌱 Starting database seeding (mode: ${mode})...`);
 
   const uploadsDir = path.resolve(__dirname, '../backend/uploads/public');
   if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+    try {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    } catch {
+      // Ephemeral disk fallback
+    }
   }
 
   // 1. Seed Planner Config
@@ -188,22 +236,24 @@ export async function seedDatabase(targetPrisma = prisma) {
   // 3. Seed Exactly 3 Clean Customer Users (ZERO bookings, ZERO chats)
   console.log('-> Seeding 3 clean customer users (9390075877, 6305729847, 9963773539)...');
 
-  // Purge any existing customer users who are not in the exact three
-  const allowedCustomerPhones = ['9390075877', '6305729847', '9963773539'];
-  const strayCustomers = await targetPrisma.user.findMany({
-    where: {
-      role: 'user',
-      NOT: { phone: { in: allowedCustomerPhones } }
-    },
-    select: { id: true }
-  });
-  if (strayCustomers.length > 0) {
-    const strayIds = strayCustomers.map(u => u.id);
-    await targetPrisma.refreshToken.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.plan.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.notification.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.contactViolation.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.user.deleteMany({ where: { id: { in: strayIds } } });
+  // Purge any existing customer users who are not in the exact three ONLY in demo mode, NEVER in production/minimal
+  if (mode !== 'minimal' && process.env.NODE_ENV !== 'production') {
+    const allowedCustomerPhones = ['9390075877', '6305729847', '9963773539'];
+    const strayCustomers = await targetPrisma.user.findMany({
+      where: {
+        role: 'user',
+        NOT: { phone: { in: allowedCustomerPhones } }
+      },
+      select: { id: true }
+    });
+    if (strayCustomers.length > 0) {
+      const strayIds = strayCustomers.map(u => u.id);
+      await targetPrisma.refreshToken.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.plan.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.notification.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.contactViolation.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.user.deleteMany({ where: { id: { in: strayIds } } });
+    }
   }
 
   const customersToSeed = [
@@ -272,7 +322,8 @@ export async function seedDatabase(targetPrisma = prisma) {
 
   // 4. Seed Admin
   console.log('-> Seeding admin...');
-  const adminPasswordHash = await bcrypt.hash('Admin@12345', 10);
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@12345';
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
   await targetPrisma.user.upsert({
     where: { username: 'admin' },
     update: {
@@ -512,6 +563,13 @@ export async function seedDatabase(targetPrisma = prisma) {
         }
       }
     }
+  }
+
+  // If running in minimal mode (e.g. production baseline), finish here cleanly
+  if (mode === 'minimal') {
+    console.log('✅ [Minimal Mode] Core configuration, cities, customer accounts, administrator, and essential vendor base seeded.');
+    console.log('✅ Seeding completed successfully!');
+    return;
   }
 
   // 6. Seed ~39 Platform Vendor Accounts & Distribute dummyVendors.json
@@ -963,8 +1021,10 @@ export async function seedDatabase(targetPrisma = prisma) {
 }
 
 async function main() {
+  const isDryRun = process.argv.includes('--dry-run');
+  const mode = process.env.SEED_MODE || 'demo';
   try {
-    await seedDatabase(prisma);
+    await seedDatabase(prisma, { dryRun: isDryRun, mode });
   } catch (e) {
     console.error('❌ Seeding failed:', e);
     process.exit(1);
