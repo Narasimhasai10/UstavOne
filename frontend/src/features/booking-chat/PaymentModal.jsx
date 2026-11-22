@@ -144,7 +144,7 @@ export default function PaymentModal({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Payable Amount (incl. 18% GST)</div>
-                  <div style={{ fontFamily: 'Yatra One, serif', fontSize: '1.8rem', color: 'var(--ink)', marginTop: '2px' }}>
+                  <div style={{ fontFamily: 'Yatra One, serif', fontSize: '1.8rem', color: '#a79768', marginTop: '2px' }}>
                     {formatINR(totalAmount)}
                   </div>
                 </div>
@@ -187,7 +187,7 @@ export default function PaymentModal({
                   Vendor Verified UPI ID
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', color: '#a79768' }}>
                     {vendorUpiId}
                   </span>
                   <span style={{ background: '#E8F5E9', color: 'var(--leaf)', fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px' }}>
@@ -279,7 +279,7 @@ export default function PaymentModal({
                 borderRadius: '14px',
                 border: '2px solid var(--gold)',
                 background: 'transparent',
-                color: 'var(--ink)',
+                color: '#a79768',
                 fontFamily: 'Yatra One, serif',
                 fontSize: '1.05rem',
                 cursor: 'pointer',
