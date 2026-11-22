@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../../utils/prisma.js";
+import { storageAdapter } from "../../adapters/storage/index.js";
 
 const router = Router();
 
@@ -83,6 +84,22 @@ router.get("/", async (req, res, next) => {
       })
     ]);
 
+    // Fetch FileRecords for coverPhotoId and branch photos
+    const fileIds = new Set();
+    for (const b of branches) {
+      if (b.coverPhotoId) fileIds.add(b.coverPhotoId);
+      for (const p of (b.photos || [])) {
+        if (p.fileId) fileIds.add(p.fileId);
+      }
+    }
+    const fileRecords = await prisma.fileRecord.findMany({
+      where: { id: { in: Array.from(fileIds) } }
+    });
+    const fileMap = new Map();
+    for (const fr of fileRecords) {
+      fileMap.set(fr.id, storageAdapter.getUrl(fr.path));
+    }
+
     // Format safe response (NO vendor phone or email)
     const items = branches.map(b => {
       let amenitiesList = [];
@@ -91,6 +108,21 @@ router.get("/", async (req, res, next) => {
       } catch (e) {
         amenitiesList = [];
       }
+
+      const photos = (b.photos || []).map(p => {
+        const resolvedUrl = fileMap.get(p.fileId) || (p.fileId?.startsWith('/uploads') ? p.fileId : null) || p.fileId;
+        return {
+          id: p.id,
+          fileId: p.fileId,
+          url: resolvedUrl,
+          caption: p.caption,
+          isCover: p.isCover
+        };
+      });
+
+      const coverUrl = b.coverPhotoId
+        ? (fileMap.get(b.coverPhotoId) || (b.coverPhotoId.startsWith('/uploads') ? b.coverPhotoId : null))
+        : (photos.find(p => p.isCover)?.url || photos[0]?.url || null);
 
       return {
         id: b.id,
@@ -109,12 +141,8 @@ router.get("/", async (req, res, next) => {
         bookingsCount: b.bookingsCount,
         amenities: amenitiesList,
         coverPhotoId: b.coverPhotoId,
-        photos: b.photos.map(p => ({
-          id: p.id,
-          fileId: p.fileId,
-          caption: p.caption,
-          isCover: p.isCover
-        })),
+        coverPhotoUrl: coverUrl,
+        photos,
         hallDetails: b.hallDetails ? {
           capacity: b.hallDetails.capacity,
           acMode: b.hallDetails.acMode,
@@ -157,9 +185,10 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+    const targetId = id === 'h-kad-1' ? 'branch-sai-hall-1' : (id === 'h-kad-sai-bypass' ? 'branch-sai-hall-2' : (id === 'c-kad-annapurna' ? 'branch-annapurna-cat-1' : id));
 
-    const branch = await prisma.branch.findUnique({
-      where: { id },
+    let branch = await prisma.branch.findUnique({
+      where: { id: targetId },
       include: {
         city: true,
         hallDetails: true,
@@ -203,6 +232,57 @@ router.get("/:id", async (req, res, next) => {
       amenities = [];
     }
 
+    // Fetch FileRecords for branch photos, works photos, and coverPhotoId
+    const fileIds = new Set();
+    if (branch.coverPhotoId) fileIds.add(branch.coverPhotoId);
+    for (const p of (branch.photos || [])) {
+      if (p.fileId) fileIds.add(p.fileId);
+    }
+    for (const w of (branch.works || [])) {
+      for (const wp of (w.photos || [])) {
+        if (wp.fileId) fileIds.add(wp.fileId);
+      }
+    }
+    const fileRecords = await prisma.fileRecord.findMany({
+      where: { id: { in: Array.from(fileIds) } }
+    });
+    const fileMap = new Map();
+    for (const fr of fileRecords) {
+      fileMap.set(fr.id, storageAdapter.getUrl(fr.path));
+    }
+
+    const photos = (branch.photos || []).map(p => {
+      const resolvedUrl = fileMap.get(p.fileId) || (p.fileId?.startsWith('/uploads') ? p.fileId : null) || p.fileId;
+      return {
+        id: p.id,
+        fileId: p.fileId,
+        url: resolvedUrl,
+        caption: p.caption,
+        isCover: p.isCover,
+        order: p.sortOrder
+      };
+    });
+
+    const works = (branch.works || []).map(w => ({
+      id: w.id,
+      title: w.title,
+      eventType: w.eventType,
+      eventDate: w.eventDate,
+      guests: w.guests,
+      caption: w.caption,
+      photos: (w.photos || []).map(wp => ({
+        id: wp.id,
+        fileId: wp.fileId,
+        url: fileMap.get(wp.fileId) || (wp.fileId?.startsWith('/uploads') ? wp.fileId : null) || wp.fileId,
+        caption: wp.caption,
+        order: wp.sortOrder
+      }))
+    }));
+
+    const coverUrl = branch.coverPhotoId
+      ? (fileMap.get(branch.coverPhotoId) || (branch.coverPhotoId.startsWith('/uploads') ? branch.coverPhotoId : null))
+      : (photos.find(p => p.isCover)?.url || photos[0]?.url || null);
+
     // Safe sanitized response
     const sanitized = {
       id: branch.id,
@@ -222,12 +302,8 @@ router.get("/:id", async (req, res, next) => {
       bookingsCount: branch.bookingsCount,
       amenities,
       coverPhotoId: branch.coverPhotoId,
-      photos: branch.photos.map(p => ({
-        id: p.id,
-        fileId: p.fileId,
-        caption: p.caption,
-        isCover: p.isCover
-      })),
+      coverPhotoUrl: coverUrl,
+      photos,
       hallDetails: branch.hallDetails ? {
         capacity: branch.hallDetails.capacity,
         acMode: branch.hallDetails.acMode,
@@ -255,15 +331,7 @@ router.get("/:id", async (req, res, next) => {
         category: m.category,
         isVeg: m.isVeg
       })),
-      works: branch.works.map(w => ({
-        id: w.id,
-        title: w.title,
-        eventType: w.eventType,
-        eventDate: w.eventDate,
-        guests: w.guests,
-        caption: w.caption,
-        photos: w.photos.map(wp => ({ id: wp.id, fileId: wp.fileId }))
-      })),
+      works,
       reviews: branch.reviews.map(r => {
         // Obfuscate user name for privacy (e.g. "Ramesh K.")
         const parts = (r.user?.name || "Customer").split(" ");

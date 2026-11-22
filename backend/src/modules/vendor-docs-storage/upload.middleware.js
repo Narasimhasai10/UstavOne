@@ -11,7 +11,7 @@ const privateDocsDir = path.join(config.uploadDir, 'private');
 if (!fs.existsSync(publicUploadsDir)) fs.mkdirSync(publicUploadsDir, { recursive: true });
 if (!fs.existsSync(privateDocsDir)) fs.mkdirSync(privateDocsDir, { recursive: true });
 
-function getMagicMime(buffer) {
+export function getMagicMime(buffer) {
   if (!buffer || buffer.length < 4) return null;
   // JPEG: FF D8 FF
   if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
@@ -24,11 +24,13 @@ function getMagicMime(buffer) {
   return null;
 }
 
+export const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const storage = multer.memoryStorage();
 
 export const uploadPhoto = multer({
   storage,
-  limits: { fileSize: 8 * 1024 * 1024 } // 8 MB
+  limits: { fileSize: config.maxPhotoSizeBytes || 8 * 1024 * 1024 } // 8 MB
 });
 
 export const uploadDocument = multer({

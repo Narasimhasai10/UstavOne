@@ -37,11 +37,13 @@ export default function VendorRevenue({ vendor }) {
         });
       }
     };
+    window.addEventListener('utsavora:catalog-changed', handleCatalogChanged);
     window.addEventListener('vedika:catalog-changed', handleCatalogChanged);
 
     return () => {
       isMounted = false;
-      window.removeEventListener('vedika:catalog-changed', handleCatalogChanged);
+      window.removeEventListener('utsavora:catalog-changed', handleCatalogChanged);
+    window.removeEventListener('vedika:catalog-changed', handleCatalogChanged);
     };
   }, [vendor]);
 
@@ -336,7 +338,7 @@ export default function VendorRevenue({ vendor }) {
       return;
     }
 
-    const headers = ['Booking ID', 'Date', 'Customer', 'Branch', 'Event Type', 'Gross Amount (INR)', 'UstavOne Commission 10% (INR)', 'Net Payout (INR)', 'Status'];
+    const headers = ['Booking ID', 'Date', 'Customer', 'Branch', 'Event Type', 'Gross Amount (INR)', 'Utsavora Commission 10% (INR)', 'Net Payout (INR)', 'Status'];
     const rows = exportablePayouts.map(b => {
       const total = Number(b.amount || b.totalAmount || 0);
       const comm = Math.round(total * VENDOR_CONFIG.commissionRate);
@@ -360,7 +362,7 @@ export default function VendorRevenue({ vendor }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ustavone-payouts-${vendor?.username || 'vendor'}.csv`);
+    link.setAttribute('download', `utsavora-payouts-${vendor?.username || 'vendor'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -474,7 +476,7 @@ export default function VendorRevenue({ vendor }) {
             No earnings yet
           </h3>
           <p style={{ color: 'var(--muted)', maxWidth: '440px', margin: '0 auto', fontSize: '14px', lineHeight: 1.5 }}>
-            Your revenue will show here after your first booking. All payments are secured through UstavOne and paid directly into your verified bank account.
+            Your revenue will show here after your first booking. All payments are secured through Utsavora and paid directly into your verified bank account.
           </p>
         </div>
       ) : (
@@ -857,7 +859,7 @@ export default function VendorRevenue({ vendor }) {
                     >
                       Gross Amount {sortField === 'gross' ? (sortAsc ? '▲' : '▼') : ''}
                     </th>
-                    <th style={{ padding: '12px 10px' }}>UstavOne Fee (10%)</th>
+                    <th style={{ padding: '12px 10px' }}>Utsavora Fee (10%)</th>
                     <th
                       onClick={() => { setSortField('net'); setSortAsc(!sortAsc); }}
                       style={{ padding: '12px 10px', cursor: 'pointer' }}

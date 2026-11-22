@@ -698,6 +698,7 @@ export default function VendorDetails({ vendor, onNavigate }) {
               setHasUnsavedChanges(true);
             }}
             maxPhotos={VENDOR_CONFIG.maxPhotosPerBranch}
+            branchId={selectedBranchId}
           />
 
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -872,6 +873,7 @@ export default function VendorDetails({ vendor, onNavigate }) {
                       photos={workForm.photos}
                       onChange={newPhotos => setWorkForm({ ...workForm, photos: newPhotos })}
                       maxPhotos={6}
+                      branchId={selectedBranchId}
                     />
                   </div>
                 </div>

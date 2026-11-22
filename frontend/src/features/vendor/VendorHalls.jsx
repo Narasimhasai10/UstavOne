@@ -366,7 +366,7 @@ export default function VendorHalls({ vendor, onNavigate }) {
               Delete this branch?
             </h3>
             <p style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.5, margin: '0 0 20px' }}>
-              This branch will be removed from your catalog and will no longer be visible to customers on UstavOne.
+              This branch will be removed from your catalog and will no longer be visible to customers on Utsavora.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
@@ -926,6 +926,7 @@ export default function VendorHalls({ vendor, onNavigate }) {
                   photos={formData.photos}
                   onChange={newPhotos => setFormData({ ...formData, photos: newPhotos })}
                   maxPhotos={VENDOR_CONFIG.maxPhotosPerBranch}
+                  branchId={editingBranchId || null}
                 />
               </div>
 
@@ -971,7 +972,7 @@ export default function VendorHalls({ vendor, onNavigate }) {
                   {formData.type === 'hall' ? '🏛 Trade Licence Verification' : '🍽 FSSAI Licence Verification'}
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '0 0 16px' }}>
-                  To ensure quality and authenticity for our customers, each branch licence is verified by UstavOne AI pre-check.
+                  To ensure quality and authenticity for our customers, each branch licence is verified by Utsavora AI pre-check.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1036,7 +1037,7 @@ export default function VendorHalls({ vendor, onNavigate }) {
                     }}
                   >
                     <div style={{ fontWeight: 600, color: verificationResult.status === 'Verified' ? 'var(--leaf)' : '#B78103', marginBottom: '6px' }}>
-                      {verificationResult.status === 'Verified' ? '✅ Verified by UstavOne AI (pre-check)' : '🟡 Needs manual review (usually 24 hours)'}
+                      {verificationResult.status === 'Verified' ? '✅ Verified by Utsavora AI (pre-check)' : '🟡 Needs manual review (usually 24 hours)'}
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#333' }}>
                       {verificationResult.checks.map((chk, idx) => (

@@ -84,7 +84,7 @@ export default function VendorHeader({
           gap: '8px'
         }}
       >
-        {/* LEFT: Logo Vedika with Accent Circle + Vendor Tag */}
+        {/* LEFT: Logo Utsavora with Accent Circle + Vendor Tag */}
         <a
           href="#/v/home"
           className="logo"
@@ -114,7 +114,7 @@ export default function VendorHeader({
               transition: 'background 0.6s'
             }}
           />
-          <span>UstavOne</span>
+          <span>Utsavora</span>
           <span
             style={{
               fontSize: '0.72rem',

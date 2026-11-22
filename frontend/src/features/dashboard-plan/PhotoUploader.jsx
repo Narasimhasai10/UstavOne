@@ -1,20 +1,58 @@
 import React, { useState, useRef } from 'react';
 import { compressImage, savePhoto, getPhoto } from '../../shared/utils/photos.js';
+import { isLive } from '../../shared/api/client.js';
+import {
+  uploadBranchPhotos,
+  uploadWorkPhotos,
+  updatePhoto,
+  deletePhoto
+} from '../../shared/data-service/index.js';
+import SafeImage from '../../shared/components/SafeImage.jsx';
+
+/**
+ * Checks client-side magic bytes to detect genuine JPG, PNG, and WebP images,
+ * catching renamed non-image files before upload or canvas processing.
+ */
+async function checkClientMagicBytes(file) {
+  try {
+    const slice = file.slice(0, 16);
+    const buffer = await slice.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    if (bytes.length < 4) return null;
+
+    // JPEG: FF D8 FF
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+    // PNG: 89 50 4E 47
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+    // WEBP: RIFF....WEBP
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+      const text = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+      if (text === 'WEBP') return 'image/webp';
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export default function PhotoUploader({
-  photos = [], // Array of { id, url?, caption?, isCover?: boolean }
+  photos = [], // Array of { id, url?, caption?, isCover?: boolean, order?: number }
   onChange,
-  maxPhotos = 12
+  maxPhotos = 12,
+  branchId = null,
+  workId = null
 }) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState('');
-  const [activeCaptionIdx, setActiveCaptionIdx] = useState(null);
+  const [failedFiles, setFailedFiles] = useState(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
   const handleFiles = async (fileList) => {
     if (!fileList || fileList.length === 0) return;
     setUploadError('');
+    setFailedFiles(null);
 
     const files = Array.from(fileList);
     const remainingSlots = maxPhotos - photos.length;
@@ -23,49 +61,105 @@ export default function PhotoUploader({
       return;
     }
 
+    if (files.length > remainingSlots) {
+      setUploadError(`Maximum limit of ${maxPhotos} photos reached. You can only add ${remainingSlots} more.`);
+      return;
+    }
+
     const selectedFiles = files.slice(0, remainingSlots);
+
+    // Validate files for size and magic MIME bytes
+    const validFiles = [];
+    for (const file of selectedFiles) {
+      if (file.size > 8 * 1024 * 1024) {
+        setUploadError(`File "${file.name}" exceeds the 8 MB maximum size limit.`);
+        return;
+      }
+
+      const detectedMime = await checkClientMagicBytes(file);
+      if (!detectedMime) {
+        setUploadError(`Invalid file format for "${file.name}". Only genuine JPG, PNG, and WebP image formats are supported.`);
+        return;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
+
     setIsUploading(true);
+    setUploadProgress(0);
 
     try {
-      const newItems = [];
-      for (const file of selectedFiles) {
-        if (!file.type.startsWith('image/')) {
-          setUploadError('Only image files (JPG, PNG, WebP) are supported.');
-          continue;
+      // 1. Live mode upload to backend API if branchId or workId is present
+      if (isLive() && (branchId || workId)) {
+        let serverPhotos = [];
+        if (branchId) {
+          serverPhotos = await uploadBranchPhotos(branchId, validFiles, (percent) => {
+            setUploadProgress(percent);
+          });
+        } else if (workId) {
+          serverPhotos = await uploadWorkPhotos(workId, validFiles, (percent) => {
+            setUploadProgress(percent);
+          });
         }
 
-        if (file.size > 8 * 1024 * 1024) {
-          setUploadError(`File ${file.name} exceeds 8 MB maximum limit before compression.`);
-          continue;
+        if (Array.isArray(serverPhotos) && serverPhotos.length > 0) {
+          const formatted = serverPhotos.map((sp, idx) => ({
+            id: sp.id,
+            url: sp.url,
+            caption: sp.caption || '',
+            isCover: sp.isCover !== undefined ? sp.isCover : (photos.length === 0 && idx === 0),
+            order: sp.order !== undefined ? sp.order : photos.length + idx
+          }));
+          onChange([...photos, ...formatted]);
+        }
+      } else {
+        // 2. Offline mode or pending local branch creation: compress in browser canvas & save to IndexedDB
+        const newItems = [];
+        for (let idx = 0; idx < validFiles.length; idx++) {
+          const file = validFiles[idx];
+          const compressedDataUrl = await compressImage(file, 1280, 0.8);
+          const photoId = await savePhoto(compressedDataUrl);
+
+          newItems.push({
+            id: photoId,
+            url: compressedDataUrl,
+            caption: file.name ? file.name.replace(/\.[^/.]+$/, '') : '',
+            isCover: photos.length === 0 && newItems.length === 0,
+            order: photos.length + idx
+          });
         }
 
-        // Compress image in browser canvas
-        const compressedDataUrl = await compressImage(file, 1280, 0.8);
-        const photoId = await savePhoto(compressedDataUrl);
-
-        newItems.push({
-          id: photoId,
-          url: compressedDataUrl,
-          caption: '',
-          isCover: photos.length === 0 && newItems.length === 0
-        });
-      }
-
-      if (newItems.length > 0) {
-        onChange([...photos, ...newItems]);
+        if (newItems.length > 0) {
+          onChange([...photos, ...newItems]);
+        }
       }
     } catch (err) {
-      setUploadError('Failed to process image: ' + err.message);
+      console.error('[PhotoUploader] Upload error:', err);
+      setFailedFiles(validFiles);
+      setUploadError(err.message || 'Network problem occurred while uploading photos. Please check your connection and retry.');
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
     }
   };
 
-  const handleRemove = (index) => {
+  const handleRemove = async (index) => {
+    const target = photos[index];
+    if (target && target.id && isLive()) {
+      deletePhoto(target.id).catch(err => {
+        console.warn('[PhotoUploader] Server photo deletion failed:', err.message);
+      });
+    }
+
     const updated = photos.filter((_, i) => i !== index);
-    // If cover was removed, assign first remaining as cover
     if (updated.length > 0 && !updated.some(p => p.isCover)) {
       updated[0].isCover = true;
+      if (isLive() && updated[0].id) {
+        updatePhoto(updated[0].id, { isCover: true }).catch(() => {});
+      }
     }
     onChange(updated);
   };
@@ -75,6 +169,9 @@ export default function PhotoUploader({
       ...p,
       isCover: i === index
     }));
+    if (isLive() && updated[index]?.id) {
+      updatePhoto(updated[index].id, { isCover: true }).catch(() => {});
+    }
     onChange(updated);
   };
 
@@ -83,12 +180,16 @@ export default function PhotoUploader({
     const updated = [...photos];
     const [moved] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, moved);
-    onChange(updated);
+    const reordered = updated.map((p, idx) => ({ ...p, order: idx }));
+    onChange(reordered);
   };
 
   const handleCaptionChange = (index, caption) => {
     const updated = photos.map((p, i) => i === index ? { ...p, caption } : p);
     onChange(updated);
+    if (isLive() && updated[index]?.id) {
+      updatePhoto(updated[index].id, { caption }).catch(() => {});
+    }
   };
 
   return (
@@ -115,7 +216,7 @@ export default function PhotoUploader({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           multiple
           style={{ display: 'none' }}
           onChange={(e) => handleFiles(e.target.files)}
@@ -123,7 +224,7 @@ export default function PhotoUploader({
         <input
           ref={cameraInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           capture="environment"
           style={{ display: 'none' }}
           onChange={(e) => handleFiles(e.target.files)}
@@ -134,7 +235,7 @@ export default function PhotoUploader({
           Drag and drop photos here, or tap to choose files
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '14px' }}>
-          Up to {maxPhotos} photos (max 8 MB each). Compressed in browser to 1280px.
+          Up to {maxPhotos} photos (JPG, PNG, WebP up to 8 MB each).
         </div>
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
@@ -159,13 +260,23 @@ export default function PhotoUploader({
 
       {isUploading && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: 'var(--gold)', fontWeight: 600 }}>
-          <span>⏳ Compressing and saving photos…</span>
+          <span>⏳ {uploadProgress > 0 ? `Uploading photos (${uploadProgress}%)…` : 'Processing and uploading photos…'}</span>
         </div>
       )}
 
       {uploadError && (
-        <div style={{ color: 'var(--rose)', fontSize: '0.84rem', fontWeight: 500 }}>
-          ⚠️ {uploadError}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', color: 'var(--rose)', fontSize: '0.84rem', fontWeight: 500, background: 'rgba(181, 23, 59, 0.08)', padding: '8px 12px', borderRadius: '8px' }}>
+          <span>⚠️ {uploadError}</span>
+          {failedFiles && (
+            <button
+              type="button"
+              className="pill"
+              onClick={() => handleFiles(failedFiles)}
+              style={{ fontSize: '0.78rem', padding: '2px 10px', minHeight: '28px', color: 'var(--rose)', borderColor: 'var(--rose)' }}
+            >
+              🔄 Retry
+            </button>
+          )}
         </div>
       )}
 
@@ -195,9 +306,9 @@ export default function PhotoUploader({
                 flexDirection: 'column'
               }}
             >
-              {/* Image Preview */}
+              {/* Image Preview with SafeImage */}
               <div style={{ position: 'relative', height: '110px', background: '#0000000a' }}>
-                <img
+                <SafeImage
                   src={item.url || item.id}
                   alt={item.caption || `Photo ${index + 1}`}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}

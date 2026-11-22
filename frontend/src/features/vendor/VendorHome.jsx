@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatINR } from '../dashboard-plan/engine/planner.js';
-import { getVendorBranches, getVendorBookings, getVendorChatThreads } from '../../shared/data-service/index.js';
+import { getVendorBranches, getVendorBookings, getVendorChatThreads, syncBrowserPhotosToBackend } from '../../shared/data-service/index.js';
 import { subscribeChat } from '../booking-chat/chatStore.js';
 
 export default function VendorHome({
@@ -37,6 +37,7 @@ export default function VendorHome({
     };
 
     loadData();
+    syncBrowserPhotosToBackend(username);
 
     const unsubChat = subscribeChat(() => {
       getVendorChatThreads(username).then(chs => {
@@ -128,7 +129,7 @@ export default function VendorHome({
         >
           <span style={{ fontSize: '1.4rem' }}>🟡</span>
           <div style={{ fontSize: '0.88rem', color: 'var(--text)' }}>
-            <strong>Under review:</strong> {underReviewDocs.join(', ')} is currently under 24-hour review by the UstavOne team. Branches go live as soon as verified.
+            <strong>Under review:</strong> {underReviewDocs.join(', ')} is currently under 24-hour review by the Utsavora team. Branches go live as soon as verified.
           </div>
         </div>
       )}

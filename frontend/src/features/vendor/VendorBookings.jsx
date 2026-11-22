@@ -627,7 +627,7 @@ export default function VendorBookings({ vendor, onNavigate }) {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
-                <span style={{ color: 'var(--muted)' }}>UstavOne Platform Fee (10%):</span>
+                <span style={{ color: 'var(--muted)' }}>Utsavora Platform Fee (10%):</span>
                 <span style={{ color: 'var(--rose)', fontWeight: 600 }}>
                   -₹{Math.round(Number(selectedBookingDetails.amount || selectedBookingDetails.totalAmount || 0) * VENDOR_CONFIG.commissionRate).toLocaleString('en-IN')}
                 </span>

@@ -94,7 +94,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
   // Load registered users and vendor bookings for name linking
   useEffect(() => {
     try {
-      const uRaw = safeStorage.getItem('vedika_users');
+      const uRaw = safeStorage.getItem('utsavora_users') || safeStorage.getItem('vedika_users');
       if (uRaw) setUsers(JSON.parse(uRaw));
     } catch {}
 
@@ -211,12 +211,12 @@ export default function VendorRequests({ vendor, initialThreadId }) {
         if (found.unreadCount > 0 || found.unread) {
           setThreads(prev => prev.map(t => t.id === threadIdToLoad ? { ...t, unreadCount: 0, unread: false, messages: updatedMsgs } : t));
           try {
-            const rawStored = safeStorage.getItem(`vedika_vendor_chats_${vendor.username}`);
+            const rawStored = safeStorage.getItem(`utsavora_vendor_chats_${vendor.username}`) || safeStorage.getItem(`vedika_vendor_chats_${vendor.username}`);
             if (rawStored) {
               const list = JSON.parse(rawStored);
               const updatedList = list.map(t => t.id === threadIdToLoad ? { ...t, unreadCount: 0, unread: false, messages: updatedMsgs } : t);
-              safeStorage.setItem(`vedika_vendor_chats_${vendor.username}`, JSON.stringify(updatedList));
-              window.dispatchEvent(new CustomEvent('vedika:chat-read', { detail: { threadId: threadIdToLoad } }));
+              safeStorage.setItem(`utsavora_vendor_chats_${vendor.username}`, JSON.stringify(updatedList));
+              window.dispatchEvent(new CustomEvent('utsavora:chat-read', { detail: { threadId: threadIdToLoad } }));
             }
           } catch (_) {}
         }
@@ -242,7 +242,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
 
     if (!isLive()) {
       const handleStorage = async (e) => {
-        if (e.key?.startsWith('vedika_vendor_chats_') || e.key?.startsWith('vedika_chat_')) {
+        if (e.key?.startsWith('utsavora_vendor_chats_') || e.key?.startsWith('vedika_vendor_chats_') || e.key?.startsWith('utsavora_chat_') || e.key?.startsWith('vedika_chat_')) {
           await reloadThreads();
           if (activeThread?.id) {
             const freshThreads = await getVendorChatThreads(vendor.username);
@@ -442,7 +442,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
       const updatedWarnings = await addVendorWarning(vendor.username, `Attempted contact leak: ${guardResult.reason}`);
       setCurrentWarningsCount(updatedWarnings);
       setGuardWarning(
-        `Sharing personal contact details is not allowed in UstavOne and can lead to a suspension. (Warning ${updatedWarnings} of ${VENDOR_CONFIG.warningLimit})`
+        `Sharing personal contact details is not allowed in Utsavora and can lead to a suspension. (Warning ${updatedWarnings} of ${VENDOR_CONFIG.warningLimit})`
       );
       return;
     }
@@ -525,7 +525,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
           const updatedWarnings = await addVendorWarning(vendor.username, 'Attempted contact leak via API');
           setCurrentWarningsCount(updatedWarnings);
           setGuardWarning(
-            `Sharing personal contact details is not allowed in UstavOne and can lead to a suspension. (Warning ${updatedWarnings} of ${VENDOR_CONFIG.warningLimit})`
+            `Sharing personal contact details is not allowed in Utsavora and can lead to a suspension. (Warning ${updatedWarnings} of ${VENDOR_CONFIG.warningLimit})`
           );
         } else {
           setGuardWarning(err.message || 'Failed to send message');
@@ -900,7 +900,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
                       {activeCustomerName}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--leaf)', fontWeight: 500 }}>
-                      ● Active customer · Booking via UstavOne
+                      ● Active customer · Booking via Utsavora
                     </div>
                   </div>
                 </div>
@@ -1213,7 +1213,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
             </h3>
 
             <p style={{ color: '#FFE7B0cc', fontSize: '13px', margin: '0 0 16px' }}>
-              🔒 Connecting you to the customer via UstavOne…
+              🔒 Connecting you to the customer via Utsavora…
             </p>
 
             <div style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'monospace', color: 'var(--gold)', marginBottom: '28px' }}>
@@ -1221,7 +1221,7 @@ export default function VendorRequests({ vendor, initialThreadId }) {
             </div>
 
             <p style={{ fontSize: '11px', color: '#FFE7B099', margin: '0 0 28px' }}>
-              Your private phone numbers are encrypted and protected by UstavOne Private Connect.
+              Your private phone numbers are encrypted and protected by Utsavora Private Connect.
             </p>
 
             <button

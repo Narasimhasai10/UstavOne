@@ -1,22 +1,25 @@
 /**
- * Photo Storage & In-Browser Canvas Compression
+ * Photo Storage, In-Browser Canvas Compression & Legacy Migration
  * Stores compressed image data in IndexedDB with in-memory fallback.
+ * Automatically recovers existing photos from legacy 'vedika_photos_db'.
  */
 
-const DB_NAME = 'vedika_photos_db';
+const DB_NAME = 'utsavora_photos_db';
+const OLD_DB_NAME = 'vedika_photos_db';
 const STORE_NAME = 'photos';
 const DB_VERSION = 1;
+const MIGRATION_FLAG = 'utsavora_photos_migrated';
 
 // In-memory fallback map if IndexedDB is disabled (e.g. some restricted file:// contexts)
 const inMemoryPhotos = new Map();
 
-function openDatabase() {
-  return new Promise((resolve, reject) => {
+export function openDatabase(name = DB_NAME) {
+  return new Promise((resolve) => {
     try {
       if (typeof indexedDB === 'undefined') {
         return resolve(null);
       }
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      const req = indexedDB.open(name, DB_VERSION);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -29,6 +32,135 @@ function openDatabase() {
       resolve(null);
     }
   });
+}
+
+/**
+ * One-time, idempotent migration that copies every record from
+ * IndexedDB 'vedika_photos_db' into 'utsavora_photos_db'.
+ * Skips IDs that already exist, wraps in try/catch, sets a flag
+ * in localStorage when done, and never deletes the old DB.
+ */
+export async function migrateLegacyPhotosDb() {
+  if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+    return false;
+  }
+  try {
+    if (localStorage.getItem(MIGRATION_FLAG) === 'true') {
+      return true; // Already migrated
+    }
+
+    const oldDb = await openDatabase(OLD_DB_NAME);
+    if (!oldDb) {
+      localStorage.setItem(MIGRATION_FLAG, 'true');
+      return true;
+    }
+
+    if (!oldDb.objectStoreNames.contains(STORE_NAME)) {
+      try { oldDb.close(); } catch {}
+      localStorage.setItem(MIGRATION_FLAG, 'true');
+      return true;
+    }
+
+    const records = await new Promise((resolve) => {
+      try {
+        const tx = oldDb.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        if (typeof store.getAll === 'function') {
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } else {
+          const items = [];
+          const req = store.openCursor();
+          req.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+              items.push(cursor.value);
+              cursor.continue();
+            } else {
+              resolve(items);
+            }
+          };
+          req.onerror = () => resolve(items);
+        }
+      } catch {
+        resolve([]);
+      }
+    });
+
+    try { oldDb.close(); } catch {}
+
+    if (records.length > 0) {
+      const newDb = await openDatabase(DB_NAME);
+      if (newDb) {
+        await new Promise((resolve) => {
+          try {
+            const tx = newDb.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            for (const rec of records) {
+              if (rec && rec.id) {
+                if (!inMemoryPhotos.has(rec.id) && rec.dataUrl) {
+                  inMemoryPhotos.set(rec.id, rec.dataUrl);
+                }
+                store.put(rec);
+              }
+            }
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+          } catch {
+            resolve(false);
+          }
+        });
+        try { newDb.close(); } catch {}
+      }
+    }
+
+    localStorage.setItem(MIGRATION_FLAG, 'true');
+    return true;
+  } catch (err) {
+    console.warn('[photos] Migration from legacy DB encountered error:', err);
+    return false;
+  }
+}
+
+// Auto-run migration once on browser load
+if (typeof window !== 'undefined') {
+  try {
+    migrateLegacyPhotosDb();
+  } catch {}
+}
+
+/**
+ * Returns API base origin for resolving relative /uploads paths
+ */
+export function getApiOrigin() {
+  const defaultApi = 'http://localhost:4000';
+  if (typeof window === 'undefined') return defaultApi;
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL);
+  if (envUrl) {
+    try {
+      const u = new URL(envUrl);
+      return u.origin;
+    } catch {}
+  }
+  return defaultApi;
+}
+
+/**
+ * Ensures photo URLs starting with /uploads are reachable from file:// or other origins
+ */
+export function formatPhotoUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:') || rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+    return rawUrl;
+  }
+  if (rawUrl.startsWith('/uploads')) {
+    if (typeof window !== 'undefined' && window.location?.origin && (window.location.origin.startsWith('file:') || window.location.origin === 'null')) {
+      return `${getApiOrigin()}${rawUrl}`;
+    }
+    return rawUrl;
+  }
+  return rawUrl;
 }
 
 /**
@@ -104,7 +236,7 @@ export async function savePhoto(dataUrlOrFile) {
 
   // Attempt to save to IndexedDB
   try {
-    const db = await openDatabase();
+    const db = await openDatabase(DB_NAME);
     if (db) {
       await new Promise((resolve) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -122,7 +254,8 @@ export async function savePhoto(dataUrlOrFile) {
 }
 
 /**
- * Retrieves a photo dataUrl by ID
+ * Retrieves a photo dataUrl by ID (checking memory, utsavora_photos_db,
+ * and falling back gracefully to legacy vedika_photos_db).
  */
 export async function getPhoto(id) {
   if (!id) return null;
@@ -131,22 +264,52 @@ export async function getPhoto(id) {
   }
 
   try {
-    const db = await openDatabase();
-    if (db) {
-      return await new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.get(id);
-        req.onsuccess = () => {
-          if (req.result?.dataUrl) {
-            inMemoryPhotos.set(id, req.result.dataUrl);
-            resolve(req.result.dataUrl);
-          } else {
-            resolve(null);
-          }
-        };
-        req.onerror = () => resolve(null);
+    // 1. Try new DB
+    const newDb = await openDatabase(DB_NAME);
+    if (newDb) {
+      const result = await new Promise((resolve) => {
+        try {
+          const tx = newDb.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result?.dataUrl || null);
+          req.onerror = () => resolve(null);
+        } catch {
+          resolve(null);
+        }
       });
+      if (result) {
+        inMemoryPhotos.set(id, result);
+        return result;
+      }
+    }
+
+    // 2. Fall back to old DB if not found in new DB
+    const oldDb = await openDatabase(OLD_DB_NAME);
+    if (oldDb && oldDb.objectStoreNames.contains(STORE_NAME)) {
+      const oldResult = await new Promise((resolve) => {
+        try {
+          const tx = oldDb.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch {
+          resolve(null);
+        }
+      });
+      if (oldResult?.dataUrl) {
+        inMemoryPhotos.set(id, oldResult.dataUrl);
+        // Copy into new DB for future speed
+        const targetDb = await openDatabase(DB_NAME);
+        if (targetDb) {
+          try {
+            const tx = targetDb.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).put(oldResult);
+          } catch {}
+        }
+        return oldResult.dataUrl;
+      }
     }
   } catch {
     return null;
@@ -161,7 +324,7 @@ export async function deletePhoto(id) {
   if (!id) return;
   inMemoryPhotos.delete(id);
   try {
-    const db = await openDatabase();
+    const db = await openDatabase(DB_NAME);
     if (db) {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).delete(id);
@@ -171,7 +334,7 @@ export async function deletePhoto(id) {
 
 /**
  * Resolves an array of photo objects or IDs by fetching dataUrls from IndexedDB
- * ensuring the 'url' property is populated on every returned photo object.
+ * or formatting server /uploads paths, ensuring the 'url' property is populated.
  */
 export async function resolvePhotoUrls(photos) {
   if (!Array.isArray(photos)) return [];
@@ -179,19 +342,26 @@ export async function resolvePhotoUrls(photos) {
     photos.map(async (p, idx) => {
       if (!p) return null;
       if (typeof p === 'string') {
-        if (p.startsWith('data:') || p.startsWith('http') || p.startsWith('/') || p.startsWith('blob:')) {
+        if (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')) {
           return { id: `photo_${idx}`, url: p, caption: '', isCover: idx === 0, order: idx };
         }
+        if (p.startsWith('/uploads')) {
+          return { id: `photo_${idx}`, url: formatPhotoUrl(p), caption: '', isCover: idx === 0, order: idx };
+        }
         const dbUrl = await getPhoto(p);
-        return { id: p, url: dbUrl || p, caption: '', isCover: idx === 0, order: idx };
+        return { id: p, url: dbUrl || '', caption: '', isCover: idx === 0, order: idx };
       }
 
       let url = p.url;
-      if (!url && p.id) {
+      if (!url && p.id && !p.id.startsWith('http') && !p.id.startsWith('/')) {
         url = await getPhoto(p.id);
       } else if (url && !url.startsWith('data:') && !url.startsWith('http') && !url.startsWith('/') && !url.startsWith('blob:')) {
         const dbUrl = await getPhoto(url);
-        if (dbUrl) url = dbUrl;
+        url = dbUrl || '';
+      }
+
+      if (url && url.startsWith('/uploads')) {
+        url = formatPhotoUrl(url);
       }
 
       return {
@@ -210,6 +380,7 @@ export async function resolvePhotoUrls(photos) {
  * Strips base64/data URLs from photo objects before saving to localStorage,
  * ensuring image binary data is stored safely in IndexedDB and returning
  * lightweight photo metadata objects: { id, caption, isCover, order }.
+ * Server paths (/uploads/...) and http URLs are preserved as url.
  */
 export async function stripPhotoUrlsForStorage(photos) {
   if (!Array.isArray(photos)) return [];
@@ -232,8 +403,11 @@ export async function stripPhotoUrlsForStorage(photos) {
       }
     }
 
+    const isServerUrl = url && (url.startsWith('/uploads') || url.startsWith('http'));
+
     lightweight.push({
       id: photoId || (typeof p === 'string' ? p : (p.id || `photo_${Date.now()}_${idx}`)),
+      url: isServerUrl ? url : undefined,
       caption: p.caption || '',
       isCover: Boolean(p.isCover || idx === 0),
       order: p.order !== undefined ? p.order : idx
@@ -256,7 +430,7 @@ export async function migrateInlinePhotosToIndexedDB(branches = [], works = []) 
       if (hasInline) {
         b.photos = await stripPhotoUrlsForStorage(b.photos);
         if (b.coverPhoto && (b.coverPhoto.startsWith('data:image/') || b.coverPhoto.startsWith('blob:'))) {
-          b.coverPhoto = b.photos.find(p => p.isCover)?.id || b.photos[0]?.id || '';
+          b.coverPhoto = b.photos.find(p => p.isCover)?.url || b.photos.find(p => p.isCover)?.id || b.photos[0]?.id || '';
         }
         changedBranches = true;
       }
@@ -279,4 +453,59 @@ export async function migrateInlinePhotosToIndexedDB(branches = [], works = []) 
   }
 
   return { branches, works, changedBranches, changedWorks };
+}
+
+/**
+ * Converts a data URL to a File object
+ */
+export function dataUrlToFile(dataUrl, filename = 'photo.jpg') {
+  const arr = dataUrl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+}
+
+/**
+ * Displays a non-intrusive toast notification
+ */
+export function showUtsavoraToast(message) {
+  if (typeof document === 'undefined') return;
+  const existing = document.getElementById('utsavora-toast-banner');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'utsavora-toast-banner';
+  toast.innerText = message;
+  toast.style.position = 'fixed';
+  toast.style.bottom = '24px';
+  toast.style.right = '24px';
+  toast.style.background = 'var(--gold, #E8B84A)';
+  toast.style.color = '#3A0A1E';
+  toast.style.padding = '12px 22px';
+  toast.style.borderRadius = '99px';
+  toast.style.fontWeight = '700';
+  toast.style.fontSize = '0.9rem';
+  toast.style.boxShadow = '0 6px 20px rgba(0,0,0,0.25)';
+  toast.style.zIndex = '99999';
+  toast.style.transition = 'all 0.3s ease';
+  toast.style.opacity = '0';
+  toast.style.transform = 'translateY(10px)';
+
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
 }
