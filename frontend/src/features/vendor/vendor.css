@@ -1,0 +1,114 @@
+/* Vendor Portal Selection & Highlight Backgrounds */
+.vedika-vendor-page,
+.vendor-dashboard-content {
+  --vendor-btn-bg: rgba(234, 171, 80, 0.31);
+  --vendor-btn-text: #f8ebd8;
+}
+
+[data-theme="light"] .vedika-vendor-page,
+[data-theme="light"] .vendor-dashboard-content {
+  --vendor-btn-bg: rgba(234, 171, 80, 0.31);
+  --vendor-btn-text: #3A0A1E;
+}
+
+.vedika-vendor-page ::selection {
+  background: rgba(234, 171, 80, 0.31) !important;
+  color: #f8ebd8 !important;
+}
+
+.vedika-vendor-page ::-moz-selection {
+  background: rgba(234, 171, 80, 0.31) !important;
+  color: #f8ebd8 !important;
+}
+
+[data-theme="light"] .vedika-vendor-page ::selection {
+  background: rgba(234, 171, 80, 0.31) !important;
+  color: #3A0A1E !important;
+}
+
+[data-theme="light"] .vedika-vendor-page ::-moz-selection {
+  background: rgba(234, 171, 80, 0.31) !important;
+  color: #3A0A1E !important;
+}
+
+.thread-item.active,
+.customer-request-row.active {
+  background: rgba(234, 171, 80, 0.31) !important;
+}
+
+.thread-item.active:hover,
+.customer-request-row.active:hover {
+  background: rgba(234, 171, 80, 0.45) !important;
+}
+
+.filter-chip.active,
+.filter-chip[aria-pressed="true"] {
+  background: rgba(234, 171, 80, 0.31) !important;
+  border-color: var(--gold) !important;
+  color: #f8ebd8 !important;
+}
+
+[data-theme="light"] .filter-chip.active,
+[data-theme="light"] .filter-chip[aria-pressed="true"] {
+  background: rgba(234, 171, 80, 0.31) !important;
+  border-color: #B78103 !important;
+  color: #3A0A1E !important;
+}
+
+/* Any button/toggle in the vendor portal with rgba(234, 171, 80, 0.31), #eaab504f, or var(--ink) background */
+.vedika-vendor-page button[style*="rgba(234, 171, 80, 0.31)"],
+.vendor-dashboard-content button[style*="rgba(234, 171, 80, 0.31)"],
+.vedika-vendor-page button[style*="#eaab504f"],
+.vendor-dashboard-content button[style*="#eaab504f"],
+.vedika-vendor-page button[style*="background: var(--ink)"],
+.vendor-dashboard-content button[style*="background: var(--ink)"],
+.vedika-vendor-page [style*="background: var(--ink)"],
+.vendor-dashboard-content [style*="background: var(--ink)"],
+.vedika-vendor-page button[style*="background: #f8ebd8"],
+.vedika-vendor-page button[style*="background: #F8EBD8"],
+.vendor-dashboard-content button[style*="background: #f8ebd8"],
+.vendor-dashboard-content button[style*="background: #F8EBD8"] {
+  background: rgba(234, 171, 80, 0.31) !important;
+  color: #f8ebd8 !important;
+}
+
+/* Light theme readable text on amber background */
+[data-theme="light"] .vedika-vendor-page button[style*="rgba(234, 171, 80, 0.31)"],
+[data-theme="light"] .vendor-dashboard-content button[style*="rgba(234, 171, 80, 0.31)"],
+[data-theme="light"] .vedika-vendor-page button[style*="#eaab504f"],
+[data-theme="light"] .vendor-dashboard-content button[style*="#eaab504f"],
+[data-theme="light"] .vedika-vendor-page button[style*="background: var(--ink)"],
+[data-theme="light"] .vendor-dashboard-content button[style*="background: var(--ink)"],
+[data-theme="light"] .vedika-vendor-page [style*="background: var(--ink)"],
+[data-theme="light"] .vendor-dashboard-content [style*="background: var(--ink)"],
+[data-theme="light"] .vedika-vendor-page button[style*="background: #f8ebd8"],
+[data-theme="light"] .vedika-vendor-page button[style*="background: #F8EBD8"],
+[data-theme="light"] .vendor-dashboard-content button[style*="background: #f8ebd8"],
+[data-theme="light"] .vendor-dashboard-content button[style*="background: #F8EBD8"] {
+  background: rgba(234, 171, 80, 0.31) !important;
+  color: #3A0A1E !important;
+}
+
+/* Hover & Focus states for vendor buttons */
+.vedika-vendor-page button[style*="rgba(234, 171, 80, 0.31)"]:hover,
+.vendor-dashboard-content button[style*="rgba(234, 171, 80, 0.31)"]:hover,
+.vedika-vendor-page button[style*="#eaab504f"]:hover,
+.vendor-dashboard-content button[style*="#eaab504f"]:hover,
+.vedika-vendor-page button[style*="background: var(--ink)"]:hover,
+.vendor-dashboard-content button[style*="background: var(--ink)"]:hover {
+  background: rgba(234, 171, 80, 0.48) !important;
+  border-color: var(--gold) !important;
+  color: #FFE7B0 !important;
+}
+
+[data-theme="light"] .vedika-vendor-page button[style*="rgba(234, 171, 80, 0.31)"]:hover,
+[data-theme="light"] .vendor-dashboard-content button[style*="rgba(234, 171, 80, 0.31)"]:hover,
+[data-theme="light"] .vedika-vendor-page button[style*="#eaab504f"]:hover,
+[data-theme="light"] .vendor-dashboard-content button[style*="#eaab504f"]:hover,
+[data-theme="light"] .vedika-vendor-page button[style*="background: var(--ink)"]:hover,
+[data-theme="light"] .vendor-dashboard-content button[style*="background: var(--ink)"]:hover {
+  background: rgba(234, 171, 80, 0.48) !important;
+  border-color: #B78103 !important;
+  color: #3A0A1E !important;
+}
+
