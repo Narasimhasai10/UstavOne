@@ -49,4 +49,15 @@ if (isPostgres) {
   }
   fs.copyFileSync(dbFile, backupFile);
   console.log(`✅ [db:backup] Successfully backed up database to: database/backups/${path.basename(backupFile)}`);
+
+  const uploadsDir = path.resolve(rootDir, 'backend/uploads');
+  const backupUploadsDir = path.resolve(backupDir, `uploads-backup-${timestamp}`);
+  if (fs.existsSync(uploadsDir)) {
+    if (isDryRun) {
+      console.log(`[db:backup:dry-run] Would copy backend/uploads to: ${backupUploadsDir}`);
+    } else {
+      fs.cpSync(uploadsDir, backupUploadsDir, { recursive: true });
+      console.log(`✅ [db:backup] Successfully backed up backend/uploads to: database/backups/${path.basename(backupUploadsDir)}`);
+    }
+  }
 }

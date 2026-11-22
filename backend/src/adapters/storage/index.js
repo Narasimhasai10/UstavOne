@@ -119,7 +119,7 @@ export class CloudinaryStorageAdapter {
     );
   }
 
-  async save({ buffer, originalname, mime, isPublic = true }) {
+  async save({ buffer, originalname, mime, isPublic = true, publicId = null }) {
     if (!this.isConfigured()) {
       console.warn('[CloudinaryStorageAdapter] Cloudinary not configured; falling back to LocalStorageAdapter');
       const fallback = new LocalStorageAdapter();
@@ -135,6 +135,11 @@ export class CloudinaryStorageAdapter {
       type: isPublic ? 'upload' : 'authenticated',
       access_mode: isPublic ? 'public' : 'authenticated'
     };
+
+    if (publicId) {
+      uploadOptions.public_id = publicId;
+      uploadOptions.overwrite = true;
+    }
 
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, res) => {

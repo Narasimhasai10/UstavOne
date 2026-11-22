@@ -23,7 +23,11 @@
     "db:deploy": "node scripts/db-deploy.mjs",
     "db:seed": "node database/seed.js",
     "db:seed:prod": "node scripts/db-seed-prod.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "data:export": "node scripts/export-data.mjs",
+    "data:media": "node scripts/upload-media.mjs",
+    "data:import": "node scripts/import-data.mjs",
+    "data:verify": "node scripts/verify-migration.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
