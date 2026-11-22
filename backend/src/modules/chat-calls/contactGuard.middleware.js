@@ -114,7 +114,7 @@ export async function checkContactGuard(req, res, next) {
     return res.status(422).json({
       error: {
         code: 'CONTACT_SHARING_BLOCKED',
-        message: 'Sharing personal contact details is not allowed in UstavOne and can lead to a suspension.',
+        message: 'Sharing personal contact details is not allowed in Utsavora and can lead to a suspension.',
         pattern: violation,
         warningInfo
       }

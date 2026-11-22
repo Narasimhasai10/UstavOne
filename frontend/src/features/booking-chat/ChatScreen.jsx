@@ -12,6 +12,7 @@ import api from '../../shared/api/client.js';
 import chatSocket from './chatSocket.js';
 import { containsContactInfo } from '../../shared/utils/contactGuard.js';
 import { resolvePhotoUrls } from '../../shared/utils/photos.js';
+import SafeImage from '../../shared/components/SafeImage.jsx';
 import CallModal from './CallModal.jsx';
 
 function formatMessageTime(dateInput, fallback = '10:00 AM') {
@@ -199,7 +200,7 @@ export default function ChatScreen({
       });
 
       const handleStorage = (e) => {
-        if (e.key === `vedika_chat_${vendor.id}` || e.key?.startsWith('vedika_vendor_chats_')) {
+        if (e.key === `utsavora_chat_${vendor.id}` || e.key === `vedika_chat_${vendor.id}` || e.key?.startsWith('utsavora_vendor_chats_') || e.key?.startsWith('vedika_vendor_chats_')) {
           getChatMessages(vendor.id).then(msgs => {
             if (isMounted && Array.isArray(msgs) && msgs.length > 0) {
               setMessages(msgs);
@@ -234,7 +235,7 @@ export default function ChatScreen({
     // Contact sharing guard check (client-side)
     const check = containsContactInfo(text);
     if (check.blocked) {
-      setContactWarning('⚠️ Sharing personal contact details is not allowed in UstavOne and can lead to a suspension.');
+      setContactWarning('⚠️ Sharing personal contact details is not allowed in Utsavora and can lead to a suspension.');
       return;
     }
     setContactWarning('');
@@ -316,7 +317,7 @@ export default function ChatScreen({
           return m;
         }));
         if (err.status === 422 || err.code === 'CONTACT_SHARING_BLOCKED' || err.message?.includes('contact')) {
-          setContactWarning('⚠️ Sharing personal contact details is not allowed in UstavOne and can lead to a suspension.');
+          setContactWarning('⚠️ Sharing personal contact details is not allowed in Utsavora and can lead to a suspension.');
         } else {
           setContactWarning(err.message || 'Failed to send message.');
         }
@@ -459,9 +460,10 @@ export default function ChatScreen({
           </button>
 
           {vendorCoverPhoto ? (
-            <img
+            <SafeImage
               src={vendorCoverPhoto}
               alt={vendor.name}
+              kind={vendor?.kind === 'catering' ? 'catering' : 'hall'}
               style={{
                 width: '42px',
                 height: '42px',
@@ -531,7 +533,7 @@ export default function ChatScreen({
           {/* Privacy reassurance note */}
           <div style={{ textAlign: 'center', margin: '6px 0 12px' }}>
             <span style={{ background: 'var(--card)', border: '1px solid var(--line)', color: 'var(--muted)', fontSize: '0.82rem', padding: '6px 14px', borderRadius: '99px' }}>
-              🔒 Chats and calls stay inside UstavOne. Phone numbers are never shared.
+              🔒 Chats and calls stay inside Utsavora. Phone numbers are never shared.
             </span>
           </div>
 

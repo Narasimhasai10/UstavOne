@@ -458,7 +458,7 @@ export default function MyBookingsView({
             </h3>
 
             <div style={{ background: '#FFF1F2', border: '1px solid #FECDD3', borderRadius: '12px', padding: '12px', fontSize: '0.88rem', color: '#9F1239', lineHeight: 1.45, marginBottom: '18px' }}>
-              <b>UstavOne Refund Policy:</b>
+              <b>Utsavora Refund Policy:</b>
               <ul style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
                 <li>Full refund up to 7 days before the date</li>
                 <li>50% refund up to 48 hours before</li>

@@ -20,13 +20,13 @@
  *
  * 3. The backend makes an API call to a telephony proxy provider (such as Exotel Voice API
  *    or Twilio Proxy / Voice Bridge):
- *    - Uses a virtual DID pool assigned to Vedika (e.g. 080-4567-8900).
+ *    - Uses a virtual DID pool assigned to Utsavora (e.g. 080-4567-8900).
  *    - Triggers a click-to-call bridge: Exotel calls the customer leg from the virtual number,
  *      and bridges to the vendor manager displaying the same virtual number.
  *
  * 4. Result:
- *    - The customer sees only "Vedika Secure Call" or the virtual DID on caller ID.
- *    - The vendor sees only the virtual Vedika DID on caller ID.
+ *    - The customer sees only "Utsavora Secure Call" or the virtual DID on caller ID.
+ *    - The vendor sees only the virtual Utsavora DID on caller ID.
  *    - Zero personal numbers are stored or leaked into client-side DOM or logs.
  * ============================================================================
  */
@@ -41,7 +41,7 @@ export function initiateMaskedCall(vendor) {
     vendorName: vendorName,
     vendorId: vendor?.id,
     status: 'ringing', // 'initiating' -> 'ringing' -> 'connected' -> 'ended'
-    privacyNotice: '🔒 Your phone number stays private. Connected securely via UstavOne virtual proxy.',
+    privacyNotice: '🔒 Your phone number stays private. Connected securely via Utsavora virtual proxy.',
     startTime: new Date().toISOString()
   };
 }

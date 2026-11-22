@@ -71,7 +71,7 @@ export function checkContactDetails(text) {
 
   const hasViolation = reasons.length > 0;
   const warning = hasViolation
-    ? 'Sharing personal contact details is not allowed in UstavOne and can lead to a suspension.'
+    ? 'Sharing personal contact details is not allowed in Utsavora and can lead to a suspension.'
     : '';
 
   return {

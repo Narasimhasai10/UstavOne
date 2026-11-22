@@ -105,7 +105,7 @@ export default function CallModal({
 
         {callStage === 'ringing' ? (
           <p style={{ color: 'var(--gold)', fontSize: '0.95rem', margin: '0 0 16px' }}>
-            Connecting you to the {roleLabel} via UstavOne…
+            Connecting you to the {roleLabel} via Utsavora…
           </p>
         ) : (
           <div style={{ color: 'var(--leaf)', fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px' }}>

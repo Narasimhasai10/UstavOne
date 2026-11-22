@@ -44,7 +44,7 @@ test('Booking Service: save, retrieve and cancel bookings', () => {
     amount: 55000
   });
 
-  assert.ok(booking.id.startsWith('BK-'), 'Booking ID must start with BK-');
+  assert.ok(booking.id.startsWith('UTS-') || booking.id.startsWith('BK-'), 'Booking ID must start with UTS- or BK-');
   assert.equal(booking.status, 'Confirmed');
 
   const afterSave = getUserBookings(testPhone);

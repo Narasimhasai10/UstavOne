@@ -19,7 +19,7 @@ let activeConversationId = null;
 
 function getToken() {
   try {
-    return localStorage.getItem('vedika_access_token') || null;
+    return localStorage.getItem('utsavora_access_token') || null;
   } catch {
     return null;
   }

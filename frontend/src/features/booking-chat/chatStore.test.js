@@ -32,19 +32,19 @@ if (typeof globalThis.localStorage === 'undefined') {
   };
 }
 
-describe('UstavOne Chat & Conversation Engine', () => {
+describe('Utsavora Chat & Conversation Engine', () => {
   beforeEach(() => {
     localStorage.clear();
     // Pre-populate mock vendors so resolveVendorUsername can find owner
-    localStorage.setItem('vedika_vendors', JSON.stringify([
+    localStorage.setItem('utsavora_vendors', JSON.stringify([
       { username: 'sri_convention', name: 'Sri Convention Admin' },
       { username: 'svpc_halls', name: 'SVPC Admin' },
       { username: 'sai_halls', name: 'Sai Halls Admin' }
     ]));
-    localStorage.setItem('vedika_branches_sri_convention', JSON.stringify([
+    localStorage.setItem('utsavora_branches_sri_convention', JSON.stringify([
       { id: 'branch-bvr-hall', name: 'BVR Sri Convention', type: 'hall', city: 'Rajahmundry' }
     ]));
-    localStorage.setItem('vedika_branches_svpc_halls', JSON.stringify([
+    localStorage.setItem('utsavora_branches_svpc_halls', JSON.stringify([
       { id: 'branch-svpc-hall', name: 'SVPC Function Hall', type: 'hall', city: 'Rajahmundry' }
     ]));
   });
@@ -204,7 +204,7 @@ describe('UstavOne Chat & Conversation Engine', () => {
       messages: [{ id: 'real_m_1', text: 'Real inquiry from Chanikya', sender: 'customer', createdAt: new Date().toISOString() }]
     };
 
-    localStorage.setItem('vedika_vendor_chats_sri_convention', JSON.stringify([fakeThread, realThread]));
+    localStorage.setItem('utsavora_vendor_chats_sri_convention', JSON.stringify([fakeThread, realThread]));
 
     migrateChatData();
 

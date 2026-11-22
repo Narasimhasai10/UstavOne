@@ -324,7 +324,7 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res, next) =
       return res.status(422).json({
         error: {
           code: "CONTACT_SHARING_BLOCKED",
-          message: "Sharing personal contact numbers, WhatsApp, UPI IDs or links is strictly blocked for platform safety. Please use UstavOne's masked calling or messaging."
+          message: "Sharing personal contact numbers, WhatsApp, UPI IDs or links is strictly blocked for platform safety. Please use Utsavora's masked calling or messaging."
         }
       });
     }

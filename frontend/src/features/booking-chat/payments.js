@@ -16,7 +16,7 @@ export function createPaymentSession(amountOrDetails, method = 'upi', meta = {})
     currency: 'INR',
     amount: amount || 0,
     method: payMethod,
-    vendorName: (meta && meta.vendorName) || (typeof amountOrDetails === 'object' && amountOrDetails.vendorName) || 'UstavOne Partner',
+    vendorName: (meta && meta.vendorName) || (typeof amountOrDetails === 'object' && amountOrDetails.vendorName) || 'Utsavora Partner',
     status: 'created'
   };
 }

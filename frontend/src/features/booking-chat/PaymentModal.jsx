@@ -14,7 +14,7 @@ export default function PaymentModal({
 
   const totalAmount = bookingDetails?.totalAmount || 100000;
   const vendorUpiId = vendor?.upiId || vendor?.vendorUpiId || 'sai.halls@okaxis';
-  const vendorName = vendor?.name || 'UstavOne Vendor';
+  const vendorName = vendor?.name || 'Utsavora Vendor';
 
   const isNonRefundable = Boolean(
     bookingDetails?.isNonRefundable ||
@@ -24,7 +24,7 @@ export default function PaymentModal({
   );
 
   // Booking reference ID
-  const [bookingRef] = useState(() => 'VED-2026-' + String(Math.floor(Math.random() * 9000) + 1000));
+  const [bookingRef] = useState(() => 'UTS-2026-' + String(Math.floor(Math.random() * 9000) + 1000));
 
   // Payment stages: 'direct_upi' | 'utr_input' | 'success'
   const [stage, setStage] = useState('direct_upi');
@@ -36,7 +36,7 @@ export default function PaymentModal({
     if (!vendorUpiId) return '';
     const cleanPa = encodeURIComponent(vendorUpiId);
     const cleanPn = encodeURIComponent(vendorName);
-    const cleanTn = encodeURIComponent(`UstavOne Booking ${bookingRef}`);
+    const cleanTn = encodeURIComponent(`Utsavora Booking ${bookingRef}`);
     return `upi://pay?pa=${cleanPa}&pn=${cleanPn}&am=${totalAmount}&cu=INR&tn=${cleanTn}`;
   }, [vendorUpiId, vendorName, totalAmount, bookingRef]);
 

@@ -1,10 +1,10 @@
 /**
  * Unified Local Conversation Store (chatStore.js)
- * Manages customer <-> vendor conversations in localStorage under 'vedika_conversations_v2'
+ * Manages customer <-> vendor conversations in localStorage under 'utsavora_conversations_v2'
  */
 
-export const CHAT_STORAGE_KEY = 'vedika_conversations_v2';
-export const CHAT_MIGRATED_KEY = 'vedika_chat_migrated';
+export const CHAT_STORAGE_KEY = 'utsavora_conversations_v2';
+export const CHAT_MIGRATED_KEY = 'utsavora_chat_migrated';
 
 // Safe in-memory fallback if localStorage is disabled
 const memoryStorage = new Map();
@@ -48,7 +48,7 @@ function storageRemove(key) {
 let broadcastChannel = null;
 if (typeof BroadcastChannel !== 'undefined') {
   try {
-    broadcastChannel = new BroadcastChannel('vedika-chat');
+    broadcastChannel = new BroadcastChannel('utsavora-chat');
     if (typeof broadcastChannel.unref === 'function') {
       broadcastChannel.unref();
     }
@@ -63,7 +63,7 @@ export function notifyChat(detail = {}) {
   }
   if (typeof window !== 'undefined') {
     try {
-      window.dispatchEvent(new CustomEvent('vedika:chat-updated', { detail }));
+      window.dispatchEvent(new CustomEvent('utsavora:chat-updated', { detail }));
     } catch {}
   }
 }
@@ -91,7 +91,7 @@ export function subscribeChat(callback) {
   let localBc = null;
   if (typeof BroadcastChannel !== 'undefined') {
     try {
-      localBc = new BroadcastChannel('vedika-chat');
+      localBc = new BroadcastChannel('utsavora-chat');
       if (typeof localBc.unref === 'function') {
         localBc.unref();
       }
@@ -103,11 +103,11 @@ export function subscribeChat(callback) {
     } catch {}
   }
 
-  window.addEventListener('vedika:chat-updated', handleCustomEvent);
+  window.addEventListener('utsavora:chat-updated', handleCustomEvent);
   window.addEventListener('storage', handleStorageEvent);
 
   return () => {
-    window.removeEventListener('vedika:chat-updated', handleCustomEvent);
+    window.removeEventListener('utsavora:chat-updated', handleCustomEvent);
     window.removeEventListener('storage', handleStorageEvent);
     if (localBc) {
       try { localBc.close(); } catch {}
@@ -149,13 +149,13 @@ export function resolveVendorUsername(branch) {
   if (!bId) return null;
 
   try {
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     const vendors = raw ? JSON.parse(raw) : [];
     if (Array.isArray(vendors)) {
       for (const v of vendors) {
         if (!v || !v.username) continue;
         const u = v.username.trim().toLowerCase();
-        const rawBranches = storageGet(`vedika_branches_${u}`);
+        const rawBranches = storageGet(`utsavora_branches_${u}`);
         const branches = rawBranches ? JSON.parse(rawBranches) : [];
         if (Array.isArray(branches) && branches.some(b => String(b.id || b.branchId) === bId)) {
           return u;
@@ -422,7 +422,7 @@ export function unreadCountForCustomer(phone, branchId = null) {
 
 /**
  * One-time migration: converts existing vedika_chat_* and vedika_vendor_chats_*
- * into vedika_conversations_v2 without losing real messages.
+ * into utsavora_conversations_v2 without losing real messages.
  */
 export function migrateChatData() {
   try {
@@ -439,7 +439,7 @@ export function migrateChatData() {
     let defaultPhone = '9390075877';
     let defaultName = 'Customer';
     try {
-      const uRaw = storageGet('vedika_current_user');
+      const uRaw = storageGet('utsavora_current_user');
       if (uRaw) {
         const u = JSON.parse(uRaw);
         if (u?.phone) defaultPhone = u.phone;
@@ -454,9 +454,9 @@ export function migrateChatData() {
         const key = localStorage.key(i);
         if (!key) continue;
 
-        if (key.startsWith('vedika_vendor_chats_')) {
+        if (key.startsWith('utsavora_vendor_chats_') || key.startsWith('vedika_vendor_chats_')) {
           keysToRemove.push(key);
-          const username = key.replace('vedika_vendor_chats_', '').toLowerCase();
+          const username = key.replace('utsavora_vendor_chats_', '').replace('vedika_vendor_chats_', '').toLowerCase();
           try {
             const raw = localStorage.getItem(key);
             const threads = raw ? JSON.parse(raw) : [];
@@ -506,9 +506,9 @@ export function migrateChatData() {
               }
             }
           } catch {}
-        } else if (key.startsWith('vedika_chat_')) {
+        } else if (key.startsWith('utsavora_chat_') || key.startsWith('vedika_chat_')) {
           keysToRemove.push(key);
-          const branchId = key.replace('vedika_chat_', '');
+          const branchId = key.replace('utsavora_chat_', '').replace('vedika_chat_', '');
           try {
             const raw = localStorage.getItem(key);
             const msgs = raw ? JSON.parse(raw) : [];
