@@ -1,5 +1,5 @@
 {
-  "name": "vedika-frontend",
+  "name": "utsavora-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -17,5 +17,6 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "vite": "^6.0.7"
-  }
+  },
+  "description": "Utsavora – Frontend SPA built with React and Vite"
 }

@@ -1,5 +1,5 @@
 /**
- * Location Service for Vedika
+ * Location Service for Utsavora
  * 
  * Note on Geolocation API:
  * Modern browsers strictly restrict navigator.geolocation to secure origins (HTTPS or localhost).

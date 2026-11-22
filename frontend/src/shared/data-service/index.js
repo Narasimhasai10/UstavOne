@@ -1,5 +1,5 @@
 /**
- * Unified Data Service Layer for Vedika
+ * Unified Data Service Layer for Utsavora
  * 
  * Provides a single data access interface across the entire application with two implementations:
  * 1. "live": Communicates with Express backend API & SQLite database via src/api/client.js
@@ -11,7 +11,7 @@
 import api from '../api/client.js';
 import * as store from '../services/store.js';
 import * as offlinePlanner from '../../features/dashboard-plan/engine/planner.js';
-import { resolvePhotoUrls } from '../utils/photos.js';
+import { resolvePhotoUrls, compressImage, savePhoto, getPhoto, dataUrlToFile, showUtsavoraToast } from '../utils/photos.js';
 import { CHAT_TRANSPORT } from '../../features/dashboard-plan/engine/config.js';
 import {
   getOrCreateConversation,
@@ -113,33 +113,34 @@ const authDomain = {
   seedCatalogVendors: async () => Promise.resolve(store.seedCatalogVendors()),
 
   userLogin: async (phone, password) => {
-    if (isLive()) {
-      try {
-        const data = await api.auth.userLogin(phone, password);
+    try {
+      const data = await api.auth.userLogin(phone, password);
+      if (data?.accessToken) {
+        setMode('live');
+        safeStorage.setItem('utsavora_access_token', data.accessToken);
+        if (data.refreshToken) safeStorage.setItem('utsavora_refresh_token', data.refreshToken);
         const userObj = data.user || {
-          name: data.name || 'UstavOne User',
+          name: data.name || 'Utsavora User',
           phone,
           role: 'user',
           city: data.city || 'Kadapa'
         };
         sessionDomain.setCurrentUser(userObj);
         return { success: true, user: userObj };
-      } catch (err) {
-        // Fall back to mock if network issue
-        if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
-          setMode('mock');
-          return store.authenticateUser(phone, password);
-        }
-        return { success: false, error: err.message || 'Login failed' };
       }
+    } catch {
+      // Backend not running or offline fallback
     }
     return store.authenticateUser(phone, password);
   },
 
   vendorLogin: async (identifier, password) => {
-    if (isLive()) {
-      try {
-        const data = await api.auth.vendorLogin(identifier, password);
+    try {
+      const data = await api.auth.vendorLogin(identifier, password);
+      if (data?.accessToken) {
+        setMode('live');
+        safeStorage.setItem('utsavora_access_token', data.accessToken);
+        if (data.refreshToken) safeStorage.setItem('utsavora_refresh_token', data.refreshToken);
         const vendorObj = data.vendor || data.user || {
           username: identifier,
           name: data.name || identifier,
@@ -147,13 +148,9 @@ const authDomain = {
         };
         sessionDomain.setCurrentVendor(vendorObj);
         return { success: true, vendor: vendorObj };
-      } catch (err) {
-        if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
-          setMode('mock');
-          return store.authenticateVendor(identifier, password);
-        }
-        return { success: false, error: err.message || 'Vendor login failed' };
       }
+    } catch {
+      // Backend offline -> fallback to store
     }
     return store.authenticateVendor(identifier, password);
   },
@@ -162,6 +159,10 @@ const authDomain = {
     if (isLive()) {
       try {
         const data = await api.auth.userSignup(userData);
+        if (data?.accessToken) {
+          safeStorage.setItem('utsavora_access_token', data.accessToken);
+          if (data.refreshToken) safeStorage.setItem('utsavora_refresh_token', data.refreshToken);
+        }
         sessionDomain.setCurrentUser(data.user || userData);
         return { success: true, user: data.user || userData };
       } catch (err) {
@@ -176,6 +177,10 @@ const authDomain = {
     if (isLive()) {
       try {
         const data = await api.auth.vendorSignup(vendorData);
+        if (data?.accessToken) {
+          safeStorage.setItem('utsavora_access_token', data.accessToken);
+          if (data.refreshToken) safeStorage.setItem('utsavora_refresh_token', data.refreshToken);
+        }
         sessionDomain.setCurrentVendor(data.vendor || data.user || vendorData);
         return { success: true, vendor: data.vendor || vendorData };
       } catch (err) {
@@ -187,6 +192,8 @@ const authDomain = {
 
   logout: async () => {
     sessionDomain.clear();
+    safeStorage.removeItem('utsavora_access_token');
+    safeStorage.removeItem('utsavora_refresh_token');
     safeStorage.removeItem('vedika_access_token');
     safeStorage.removeItem('vedika_refresh_token');
     return Promise.resolve(true);
@@ -205,24 +212,26 @@ const authDomain = {
 // ==========================================
 const sessionDomain = {
   getCurrentUser: () => {
-    const raw = safeStorage.getItem('vedika_current_user');
+    const raw = safeStorage.getItem('utsavora_current_user') || safeStorage.getItem('vedika_current_user');
     if (!raw) return null;
     try { return JSON.parse(raw); } catch { return null; }
   },
   setCurrentUser: (u) => {
-    if (u) safeStorage.setItem('vedika_current_user', JSON.stringify(u));
-    else safeStorage.removeItem('vedika_current_user');
+    if (u) { safeStorage.setItem('utsavora_current_user', JSON.stringify(u)); }
+    else { safeStorage.removeItem('utsavora_current_user'); safeStorage.removeItem('vedika_current_user'); }
   },
   getCurrentVendor: () => {
-    const raw = safeStorage.getItem('vedika_current_vendor');
+    const raw = safeStorage.getItem('utsavora_current_vendor') || safeStorage.getItem('vedika_current_vendor');
     if (!raw) return null;
     try { return JSON.parse(raw); } catch { return null; }
   },
   setCurrentVendor: (v) => {
-    if (v) safeStorage.setItem('vedika_current_vendor', JSON.stringify(v));
-    else safeStorage.removeItem('vedika_current_vendor');
+    if (v) { safeStorage.setItem('utsavora_current_vendor', JSON.stringify(v)); }
+    else { safeStorage.removeItem('utsavora_current_vendor'); safeStorage.removeItem('vedika_current_vendor'); }
   },
   clear: () => {
+    safeStorage.removeItem('utsavora_current_user');
+    safeStorage.removeItem('utsavora_current_vendor');
     safeStorage.removeItem('vedika_current_user');
     safeStorage.removeItem('vedika_current_vendor');
   }
@@ -275,6 +284,56 @@ const vendorsDomain = {
     // Local branches always win, and local photos, works, prices, ratings, and district are never overwritten.
     const base = store.getUnifiedVendorsCatalog(vendorBranches);
 
+    if (isLive()) {
+      try {
+        const liveRes = await api.vendors.browse({ limit: 100 });
+        const liveBranches = liveRes?.items || [];
+        for (const lb of liveBranches) {
+          const targetList = lb.kind === 'catering' ? base.caterers : base.halls;
+          const match = targetList.find(item =>
+            item.id === lb.id ||
+            item.name?.toLowerCase() === lb.name?.toLowerCase() ||
+            (item.id === 'h-kad-1' && lb.id === 'branch-sai-hall-1') ||
+            (item.id === 'h-kad-sai-bypass' && lb.id === 'branch-sai-hall-2') ||
+            (item.id === 'c-kad-annapurna' && lb.id === 'branch-annapurna-cat-1')
+          );
+          if (match) {
+            if (Array.isArray(lb.photos) && lb.photos.length > 0) {
+              match.photos = lb.photos;
+            }
+            if (lb.coverPhotoUrl) {
+              match.coverPhotoUrl = lb.coverPhotoUrl;
+              match.coverPhoto = lb.coverPhotoUrl;
+            }
+            if (Array.isArray(lb.works) && lb.works.length > 0) {
+              match.works = lb.works;
+              match.pastWorks = lb.works;
+            }
+          } else {
+            targetList.unshift({
+              id: lb.id,
+              branchId: lb.id,
+              name: lb.name,
+              type: lb.kind === 'catering' ? 'caterer' : 'hall',
+              city: lb.city,
+              state: lb.state,
+              price: lb.hallDetails?.priceFullDayNonAc || 80000,
+              photos: lb.photos || [],
+              coverPhotoUrl: lb.coverPhotoUrl,
+              coverPhoto: lb.coverPhotoUrl,
+              rating: lb.ratingAvg || 4.5,
+              ratingAvg: lb.ratingAvg || 4.5,
+              reviewsCount: lb.ratingCount || 0,
+              capacity: lb.hallDetails?.capacity || 500,
+              amenities: lb.amenities || []
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[DataService] Failed to fetch live branches for catalog:', err.message);
+      }
+    }
+
     // Resolve photos asynchronously from IndexedDB for halls and caterers
     if (base) {
       if (Array.isArray(base.halls)) {
@@ -315,6 +374,22 @@ const vendorsDomain = {
     const all = store.getUnifiedVendorsCatalog([]);
     const found = all.find(v => String(v.id) === String(id));
     if (found) {
+      if (isLive()) {
+        try {
+          const live = await api.vendors.get(id);
+          if (live) {
+            if (Array.isArray(live.photos) && live.photos.length > 0) found.photos = live.photos;
+            if (live.coverPhotoUrl) {
+              found.coverPhotoUrl = live.coverPhotoUrl;
+              found.coverPhoto = live.coverPhotoUrl;
+            }
+            if (Array.isArray(live.works) && live.works.length > 0) {
+              found.works = live.works;
+              found.pastWorks = live.works;
+            }
+          }
+        } catch {}
+      }
       if (Array.isArray(found.photos)) {
         found.photos = await resolvePhotoUrls(found.photos);
       }
@@ -329,7 +404,17 @@ const vendorsDomain = {
     }
     if (isLive()) {
       try {
-        return await api.vendors.get(id);
+        const live = await api.vendors.get(id);
+        if (live) {
+          const resolvedPhotos = await resolvePhotoUrls(live.photos || []);
+          return {
+            ...live,
+            type: live.kind === 'catering' ? 'caterer' : 'hall',
+            photos: resolvedPhotos,
+            coverPhotoUrl: live.coverPhotoUrl || resolvedPhotos.find(p => p.isCover)?.url || resolvedPhotos[0]?.url,
+            works: live.works || []
+          };
+        }
       } catch { }
     }
     return null;
@@ -359,7 +444,8 @@ const vendorsDomain = {
 // ==========================================
 const bookingsDomain = {
   getUserBookings: async (phone) => {
-    if (isLive()) {
+    const token = safeStorage.getItem('utsavora_access_token');
+    if (isLive() && token) {
       try {
         const res = await api.bookings.list();
         const items = Array.isArray(res) ? res : res?.items || [];
@@ -367,7 +453,7 @@ const bookingsDomain = {
           id: b.id,
           code: b.code,
           vendorId: b.branch?.id || b.branchId || b.id,
-          vendorName: b.branch?.name || b.vendor?.name || 'UstavOne Vendor',
+          vendorName: b.branch?.name || b.vendor?.name || 'Utsavora Vendor',
           vendorType: b.kind || b.branch?.kind || 'hall',
           eventName: b.eventType ? b.eventType.charAt(0).toUpperCase() + b.eventType.slice(1) : 'Wedding',
           eventType: b.eventType || 'wedding',
@@ -542,8 +628,56 @@ const vendorBranchesDomain = {
 };
 
 const vendorWorksDomain = {
-  getVendorPreviousWorks: async (username) => Promise.resolve(store.getVendorPreviousWorks(username)),
-  saveVendorPreviousWork: async (username, work) => Promise.resolve(store.saveVendorPreviousWork(username, work)),
+  getVendorPreviousWorks: async (username) => {
+    const local = store.getVendorPreviousWorks(username) || [];
+    if (isLive()) {
+      try {
+        const branches = await api.vendor.branches();
+        if (Array.isArray(branches?.data)) {
+          const serverWorks = [];
+          for (const b of branches.data) {
+            for (const w of (b.works || [])) {
+              serverWorks.push({
+                ...w,
+                branchId: b.id,
+                date: w.eventDate,
+                photos: (w.photos || []).map(wp => ({
+                  id: wp.id,
+                  url: wp.url,
+                  caption: wp.caption,
+                  order: wp.order
+                })),
+                coverPhoto: w.photos?.[0]?.url || ''
+              });
+            }
+          }
+          if (serverWorks.length > 0) return serverWorks;
+        }
+      } catch (e) {}
+    }
+    return local;
+  },
+  saveVendorPreviousWork: async (username, work) => {
+    let savedServerWork = null;
+    if (isLive() && work.branchId) {
+      try {
+        const photoFileIds = (work.photos || []).map(p => p.id || p.fileId).filter(Boolean);
+        const res = await api.vendor.createWork(work.branchId, {
+          title: work.title,
+          eventType: work.eventType,
+          eventDate: work.date,
+          guests: work.guests,
+          caption: work.caption,
+          photoFileIds
+        });
+        if (res?.data) savedServerWork = res.data;
+      } catch (err) {
+        console.warn('[DataService] Server createWork failed:', err.message);
+      }
+    }
+    const localWork = { ...work, id: savedServerWork?.id || work.id };
+    return store.saveVendorPreviousWork(username, localWork);
+  },
   deleteVendorPreviousWork: async (username, workId) => Promise.resolve(store.deleteVendorPreviousWork(username, workId))
 };
 
@@ -709,6 +843,122 @@ export const confirmVendorBooking = vendorBookingsDomain.confirmVendorBooking;
 
 export const updateVendorProfile = vendorProfileDomain.updateVendorProfile;
 export const addVendorWarning = vendorProfileDomain.addVendorWarning;
+
+// Photo Management Methods
+export const uploadBranchPhotos = async (branchId, files, onProgress) => {
+  if (isLive()) {
+    return api.photos.uploadBranchPhotos(branchId, files, onProgress);
+  }
+  const items = [];
+  for (const file of files) {
+    const dataUrl = await compressImage(file, 1280, 0.8);
+    const photoId = await savePhoto(dataUrl);
+    items.push({
+      id: photoId,
+      url: dataUrl,
+      caption: file.name ? file.name.replace(/\.[^/.]+$/, '') : '',
+      isCover: false
+    });
+  }
+  return items;
+};
+
+export const updatePhoto = async (photoId, data) => {
+  if (isLive()) {
+    return api.photos.updatePhoto(photoId, data);
+  }
+  return { id: photoId, ...data };
+};
+
+export const deletePhoto = async (photoId) => {
+  if (isLive()) {
+    return api.photos.deletePhoto(photoId);
+  }
+  return { message: 'Deleted locally', id: photoId };
+};
+
+export const uploadWorkPhotos = async (workId, files, onProgress) => {
+  if (isLive()) {
+    return api.photos.uploadWorkPhotos(workId, files, onProgress);
+  }
+  const items = [];
+  for (const file of files) {
+    const dataUrl = await compressImage(file, 1280, 0.8);
+    const photoId = await savePhoto(dataUrl);
+    items.push({
+      id: photoId,
+      url: dataUrl,
+      caption: file.name ? file.name.replace(/\.[^/.]+$/, '') : ''
+    });
+  }
+  return items;
+};
+
+export async function syncBrowserPhotosToBackend(username) {
+  if (!username || !isLive()) return;
+  try {
+    const branches = store.getVendorBranches(username) || [];
+    let totalSynced = 0;
+
+    for (const b of branches) {
+      if (!Array.isArray(b.photos) || b.photos.length === 0) continue;
+      const pendingPhotos = [];
+      const keptPhotos = [];
+
+      for (const p of b.photos) {
+        if (!p) continue;
+        const url = p.url || '';
+        if (url.startsWith('/uploads') || url.startsWith('http')) {
+          keptPhotos.push(p);
+          continue;
+        }
+
+        let dataUrl = url;
+        if (!dataUrl.startsWith('data:')) {
+          dataUrl = await getPhoto(p.id || url);
+        }
+
+        if (dataUrl && dataUrl.startsWith('data:image/')) {
+          const file = dataUrlToFile(dataUrl, `synced-${p.id || Date.now()}.jpg`);
+          pendingPhotos.push({ file, meta: p });
+        } else {
+          keptPhotos.push(p);
+        }
+      }
+
+      if (pendingPhotos.length > 0) {
+        try {
+          const files = pendingPhotos.map(item => item.file);
+          const uploaded = await api.photos.uploadBranchPhotos(b.id, files);
+          if (Array.isArray(uploaded)) {
+            for (let idx = 0; idx < uploaded.length; idx++) {
+              const u = uploaded[idx];
+              const orig = pendingPhotos[idx]?.meta || {};
+              keptPhotos.push({
+                id: u.id,
+                url: u.url,
+                caption: orig.caption || u.caption || '',
+                isCover: orig.isCover || u.isCover,
+                order: u.order !== undefined ? u.order : keptPhotos.length
+              });
+            }
+            b.photos = keptPhotos;
+            store.saveVendorBranch(username, b);
+            totalSynced += uploaded.length;
+          }
+        } catch (err) {
+          console.warn('[Sync] Failed to sync branch photos:', err.message);
+        }
+      }
+    }
+
+    if (totalSynced > 0) {
+      showUtsavoraToast('Your photos are now visible to customers');
+    }
+  } catch (err) {
+    console.warn('[Sync] Photos sync error:', err.message);
+  }
+}
 
 export {
   CHAT_TRANSPORT,

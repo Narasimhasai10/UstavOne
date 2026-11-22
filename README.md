@@ -1,6 +1,6 @@
-# UstavOne – Event-Booking Marketplace
+# Utsavora – Event-Booking Marketplace
 
-UstavOne is an event-planning and booking marketplace (function halls, catering, decoration, band, wedding cards) tailored for Indian families and vendors.
+Utsavora is an event-planning and booking marketplace (function halls, catering, decoration, band, wedding cards) tailored for Indian families and vendors.
 
 > **Offline Demo Mode**: Open index.html by double-clicking it directly from your file manager (zero server, zero install, 100% file:// compatible).  
 > **Test customer login**: phone `9390075877`, password `sai@1398`
@@ -34,7 +34,7 @@ npm test
 | Role | Username / Identifier | Password | Access Details |
 | :--- | :--- | :--- | :--- |
 | **Customer** | `9390075877` | `sai@1398` | User portal (Kadapa), smart AI planner, bookings, real-time chat, calls |
-| **Vendor** | `sai_halls` (or `9849012345`) | `Vedika@123` | Sai Function Halls (2 halls, 1 catering branch, 12 months historical bookings & analytics) |
+| **Vendor** | `sai_halls` (or `9849012345`) | `Utsavora@123` | Sai Function Halls (2 halls, 1 catering branch, 12 months historical bookings & analytics) |
 | **Admin** | `admin` (or `9999999999`) | `Admin@12345` | Administrative controls, automated document verification, system stats |
 
 ---
@@ -42,7 +42,7 @@ npm test
 ## 📁 Project Structure
 
 ```
-VEDIKA/
+UTSAVORA/
 ├── frontend/               # React 18 + Vite SPA client
 │   ├── src/
 │   │   ├── api/            # API client with automatic offline fallback (mock.js)
@@ -72,12 +72,12 @@ VEDIKA/
 │   ├── seed.js             # Seeder script for Kadapa vendors, branches, bookings
 │   ├── seed-data/          # Master seed catalogs (planner, locations, dummy vendors)
 │   ├── migrations/         # Prisma migration history
-│   ├── vedika.db           # SQLite database file (git-ignored)
+│   ├── utsavora.db          # SQLite database file (git-ignored)
 │   └── README.md           # Database management documentation
 │
 ├── docs/                   # System Documentation
 │   ├── ERD.md              # Mermaid diagram of all 29 database models
-│   ├── vedika.http         # REST Client ready-to-run API requests
+│   ├── utsavora.http        # REST Client ready-to-run API requests
 │   └── architecture.md     # Full architectural and privacy specification
 │
 ├── scripts/                # Workspace Automation & Quality Assurance
@@ -86,7 +86,7 @@ VEDIKA/
 │   ├── check.mjs               # Workspace integrity & hygiene auditor
 │   ├── db-check.mjs            # Validates database connection & counts
 │   ├── db-reset.mjs            # Resets and re-seeds SQLite database cleanly
-│   ├── db-backup.mjs           # Creates timestamped backup of database/vedika.db
+│   ├── db-backup.mjs           # Creates timestamped backup of database/utsavora.db
 │   ├── dev.mjs                 # Cross-platform parallel dev runner (:4000 + :5173)
 │   ├── setup.mjs               # One-click workspace initialization script
 │   └── e2e-verification.mjs    # Regression & verification suite
@@ -111,5 +111,5 @@ VEDIKA/
 | `npm test` | Runs the full 80-test automated suite (backend + frontend) |
 | `npm run check` | Audits workspace hygiene, stray HTML files, duplicate CSS, and script tags |
 | `npm run db:check` | Verifies database connection and reports model row counts |
-| `npm run db:reset` | Wipes, pushes schema, and re-seeds `database/vedika.db` |
+| `npm run db:reset` | Wipes, pushes schema, and re-seeds `database/utsavora.db` |
 | `npm run db:backup` | Saves a backup copy to `database/backups/` |

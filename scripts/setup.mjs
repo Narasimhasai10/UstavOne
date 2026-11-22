@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🚀 Setting up Vedika Workspace...\n');
+console.log('🚀 Setting up Utsavora Workspace...\n');
 
 // 1. Install root dependencies if needed
 console.log('-> 1. Installing root workspace dependencies...');

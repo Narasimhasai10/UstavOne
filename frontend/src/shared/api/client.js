@@ -43,7 +43,7 @@ async function request(endpoint, options = {}) {
     ...(options.headers || {})
   };
 
-  const token = getToken('vedika_access_token');
+  const token = getToken('utsavora_access_token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -59,7 +59,7 @@ async function request(endpoint, options = {}) {
 
     // Handle 401 Unauthorized by attempting refresh token rotation
     if (res.status === 401 && !options._retried) {
-      const refreshToken = getToken('vedika_refresh_token');
+      const refreshToken = getToken('utsavora_refresh_token');
       if (refreshToken) {
         try {
           const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
@@ -71,9 +71,9 @@ async function request(endpoint, options = {}) {
           if (refreshRes.ok) {
             const refreshData = await refreshRes.json();
             if (refreshData.data?.accessToken) {
-              setToken('vedika_access_token', refreshData.data.accessToken);
+              setToken('utsavora_access_token', refreshData.data.accessToken);
               if (refreshData.data.refreshToken) {
-                setToken('vedika_refresh_token', refreshData.data.refreshToken);
+                setToken('utsavora_refresh_token', refreshData.data.refreshToken);
               }
               // Retry the original request
               return request(endpoint, { ...options, _retried: true });
@@ -83,8 +83,8 @@ async function request(endpoint, options = {}) {
           console.warn('[API Client] Token refresh failed:', e);
         }
       }
-      removeToken('vedika_access_token');
-      removeToken('vedika_refresh_token');
+      removeToken('utsavora_access_token');
+      removeToken('utsavora_refresh_token');
     }
 
     const json = await res.json().catch(() => ({}));
@@ -108,6 +108,71 @@ async function request(endpoint, options = {}) {
       return handleMockFallback(endpoint, options, err);
     }
     throw err;
+  }
+}
+
+/**
+ * Upload multipart form data with progress callback
+ */
+async function uploadWithProgress(endpoint, formData, onProgress) {
+  const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const token = getToken('utsavora_access_token');
+
+  if (typeof XMLHttpRequest !== 'undefined') {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        };
+      }
+      xhr.onload = () => {
+        try {
+          isBackendLive = true;
+          const json = JSON.parse(xhr.responseText || '{}');
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (onProgress) onProgress(100);
+            resolve(json.data !== undefined ? json.data : json);
+          } else {
+            const err = new Error(json.error?.message || `HTTP ${xhr.status} Error`);
+            err.status = xhr.status;
+            err.code = json.error?.code;
+            reject(err);
+          }
+        } catch (e) {
+          reject(e);
+        }
+      };
+      xhr.onerror = () => {
+        isBackendLive = false;
+        reject(new Error('Network connection error during photo upload.'));
+      };
+      xhr.send(formData);
+    });
+  } else {
+    // Node / test environment fallback
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    isBackendLive = true;
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(json.error?.message || `HTTP ${res.status} Error`);
+      err.status = res.status;
+      throw err;
+    }
+    return json.data !== undefined ? json.data : json;
   }
 }
 
@@ -157,10 +222,38 @@ export const api = {
 
   // Auth
   auth: {
-    userSignup: (data) => request('/auth/user/signup', { method: 'POST', body: JSON.stringify(data) }),
-    userLogin: (phone, password) => request('/auth/user/login', { method: 'POST', body: JSON.stringify({ phone, password }) }),
-    vendorSignup: (data) => request('/auth/vendor/signup', { method: 'POST', body: JSON.stringify(data) }),
-    vendorLogin: (identifier, password) => request('/auth/vendor/login', { method: 'POST', body: JSON.stringify({ identifier, password }) }),
+    userSignup: async (data) => {
+      const res = await request('/auth/user/signup', { method: 'POST', body: JSON.stringify(data) });
+      if (res?.accessToken) {
+        setToken('utsavora_access_token', res.accessToken);
+        if (res.refreshToken) setToken('utsavora_refresh_token', res.refreshToken);
+      }
+      return res;
+    },
+    userLogin: async (phone, password) => {
+      const res = await request('/auth/user/login', { method: 'POST', body: JSON.stringify({ phone, password }) });
+      if (res?.accessToken) {
+        setToken('utsavora_access_token', res.accessToken);
+        if (res.refreshToken) setToken('utsavora_refresh_token', res.refreshToken);
+      }
+      return res;
+    },
+    vendorSignup: async (data) => {
+      const res = await request('/auth/vendor/signup', { method: 'POST', body: JSON.stringify(data) });
+      if (res?.accessToken) {
+        setToken('utsavora_access_token', res.accessToken);
+        if (res.refreshToken) setToken('utsavora_refresh_token', res.refreshToken);
+      }
+      return res;
+    },
+    vendorLogin: async (identifier, password) => {
+      const res = await request('/auth/vendor/login', { method: 'POST', body: JSON.stringify({ identifier, password }) });
+      if (res?.accessToken) {
+        setToken('utsavora_access_token', res.accessToken);
+        if (res.refreshToken) setToken('utsavora_refresh_token', res.refreshToken);
+      }
+      return res;
+    },
     me: () => request('/auth/me'),
     refresh: () => request('/auth/refresh', { method: 'POST' }),
     verifyDocument: (type, number, branchId) => request('/auth/verify-document', { method: 'POST', body: JSON.stringify({ type, number, branchId }) })
@@ -227,6 +320,7 @@ export const api = {
     addBlock: (branchId, date, reason) => request(`/vendor/branches/${branchId}/blocks`, { method: 'POST', body: JSON.stringify({ date, reason }) }),
     bookings: () => request('/vendor/bookings'),
     requests: () => request('/vendor/requests'),
+    createWork: (branchId, data) => request(`/vendor/branches/${branchId}/works`, { method: 'POST', body: JSON.stringify(data) }),
     revenueSummary: () => request('/vendor/revenue/summary'),
     revenueSeries: (months = 12) => request(`/vendor/revenue/series?months=${months}`),
     payouts: () => request('/vendor/payouts')
@@ -246,6 +340,34 @@ export const api = {
     unreadCount: () => request('/notifications/unread-count'),
     markRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
     markAllRead: () => request('/notifications/read-all', { method: 'PUT' })
+  },
+
+  // Photos
+  photos: {
+    uploadBranchPhotos: (branchId, files, onProgress) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('photos', file);
+      }
+      return uploadWithProgress(`/vendor/branches/${branchId}/photos`, formData, onProgress);
+    },
+    updatePhoto: (photoId, data) => request(`/vendor/photos/${photoId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }),
+    deletePhoto: (photoId) => request(`/vendor/photos/${photoId}`, {
+      method: 'DELETE'
+    }),
+    uploadWorkPhotos: (workId, files, onProgress) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('photos', file);
+      }
+      return uploadWithProgress(`/vendor/works/${workId}/photos`, formData, onProgress);
+    },
+    deleteWorkPhoto: (workId, photoId) => request(`/vendor/works/${workId}/photos/${photoId}`, {
+      method: 'DELETE'
+    })
   }
 };
 

@@ -1,4 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  seedTestAccount,
+  seedTestVendor,
+  seedCatalogVendors,
+  getCurrentUser,
+  setCurrentUser,
+  getCurrentVendor,
+  setCurrentVendor,
+  vendorLogout,
+  saveUserBooking,
+  getUnifiedVendorsCatalog,
+  getVendorChatThreads,
+  getMode,
+  subscribeMode
+} from './shared/data-service/index.js';
 import Header from './shared/components/Header.jsx';
 import HomePage from './features/home-auth/HomePage.jsx';
 import DashboardView from './features/dashboard-plan/DashboardView.jsx';
@@ -21,6 +36,9 @@ import VendorProfile from './features/vendor/VendorProfile.jsx';
 import { unreadCountForVendor, subscribeChat } from './features/booking-chat/chatStore.js';
 import ErrorBoundary from './shared/components/ErrorBoundary.jsx';
 import { clearStoredPlaceFilter } from './features/dashboard-plan/placeFilter.js';
+
+const KNOWN_VENDOR_ROUTES = ['home', 'halls', 'details', 'bookings', 'requests', 'revenue', 'profile'];
+const KNOWN_USER_ROUTES = ['dashboard', 'vendor', 'chat', 'bookings', 'details', 'book', 'pay'];
 
 export default function App() {
   // Current user & vendor sessions
@@ -68,12 +86,12 @@ export default function App() {
       reloadCatalog();
     };
 
-    window.addEventListener('vedika:catalog-changed', handleCatalogChanged);
+    window.addEventListener('utsavora:catalog-changed', handleCatalogChanged);
 
     let bc = null;
     if (typeof BroadcastChannel !== 'undefined') {
       try {
-        bc = new BroadcastChannel('vedika_catalog_channel');
+        bc = new BroadcastChannel('utsavora_catalog_channel');
         bc.onmessage = (ev) => {
           if (ev.data?.type === 'CATALOG_CHANGED') {
             reloadCatalog();
@@ -84,7 +102,7 @@ export default function App() {
 
     return () => {
       isMounted = false;
-      window.removeEventListener('vedika:catalog-changed', handleCatalogChanged);
+      window.removeEventListener('utsavora:catalog-changed', handleCatalogChanged);
       if (bc) bc.close();
     };
   }, [modeState]);
@@ -381,15 +399,15 @@ export default function App() {
       computeUnread();
     };
 
-    window.addEventListener('vedika:chat-message-received', handleChatEvent);
-    window.addEventListener('vedika:chat-read', handleChatEvent);
+    window.addEventListener('utsavora:chat-message-received', handleChatEvent);
+    window.addEventListener('utsavora:chat-read', handleChatEvent);
     window.addEventListener('storage', handleChatEvent);
 
     return () => {
       isMounted = false;
       if (unsubChat) unsubChat();
-      window.removeEventListener('vedika:chat-message-received', handleChatEvent);
-      window.removeEventListener('vedika:chat-read', handleChatEvent);
+      window.removeEventListener('utsavora:chat-message-received', handleChatEvent);
+      window.removeEventListener('utsavora:chat-read', handleChatEvent);
       window.removeEventListener('storage', handleChatEvent);
     };
   }, [vendor]);
@@ -397,9 +415,9 @@ export default function App() {
   // Update browser tab title based on vendor unread messages
   useEffect(() => {
     if (vendor && vendorUnreadCount > 0) {
-      document.title = `(${vendorUnreadCount}) UstavOne`;
+      document.title = `(${vendorUnreadCount}) Utsavora`;
     } else {
-      document.title = 'UstavOne';
+      document.title = 'Utsavora';
     }
   }, [vendor, vendorUnreadCount]);
 
@@ -412,8 +430,8 @@ export default function App() {
         setTimeout(() => setAppToast(''), 5000);
       }
     };
-    window.addEventListener('vedika:toast', handleToastEvent);
-    return () => window.removeEventListener('vedika:toast', handleToastEvent);
+    window.addEventListener('utsavora:toast', handleToastEvent);
+    return () => window.removeEventListener('utsavora:toast', handleToastEvent);
   }, []);
 
   const handleBookingConfirmed = async (bookingDetails) => {

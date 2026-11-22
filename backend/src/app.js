@@ -22,7 +22,8 @@ const app = express();
 
 // Security headers
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false
 }));
 
 // CORS setup supporting Vite dev, previews, and local file:// origin
@@ -55,14 +56,17 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Static public uploads (photos, avatars)
 const uploadBase = config.uploadDir ? path.resolve(config.uploadDir) : path.resolve(__dirname, "../uploads");
 const publicUploads = path.resolve(uploadBase, "public");
-if (fs.existsSync(publicUploads)) {
-  app.use("/uploads/public", express.static(publicUploads));
-} else {
-  const rootUploads = path.resolve("backend/uploads/public");
-  if (fs.existsSync(rootUploads)) {
-    app.use("/uploads/public", express.static(rootUploads));
-  }
+if (!fs.existsSync(publicUploads)) {
+  fs.mkdirSync(publicUploads, { recursive: true });
 }
+const staticUploadOptions = {
+  maxAge: "7d",
+  setHeaders: (res) => {
+    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+  }
+};
+app.use("/uploads/public", express.static(publicUploads, staticUploadOptions));
+app.use("/uploads", express.static(uploadBase, staticUploadOptions));
 
 // Serve static frontend build if present (e.g. for npm start)
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
@@ -81,7 +85,7 @@ try {
     const file = fs.readFileSync(openApiPath, "utf8");
     const swaggerDoc = yaml.parse(file);
     app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
-      customSiteTitle: "UstavOne API Documentation"
+      customSiteTitle: "Utsavora API Documentation"
     }));
   }
 } catch (e) {
@@ -101,7 +105,7 @@ app.get("/api/v1/health", (req, res) => {
   res.json({
     status: "healthy",
     version: "1.0.0",
-    service: "ustavone-backend",
+    service: "utsavora-backend",
     uptimeSec: Math.round(process.uptime()),
     timestamp: new Date().toISOString()
   });

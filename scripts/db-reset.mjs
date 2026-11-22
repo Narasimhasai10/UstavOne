@@ -6,18 +6,18 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const dbFile = path.resolve(rootDir, 'database/vedika.db');
-const dbJournal = path.resolve(rootDir, 'database/vedika.db-journal');
+const dbFile = path.resolve(rootDir, 'database/utsavora.db');
+const dbJournal = path.resolve(rootDir, 'database/utsavora.db-journal');
 const backendDir = path.resolve(rootDir, 'backend');
 const schemaPath = path.resolve(rootDir, 'database/schema.prisma');
 
-console.log('🔄 Resetting Vedika database...\n');
+console.log('🔄 Resetting Utsavora database...\n');
 
 // 1. Remove database file if exists
 try {
   if (fs.existsSync(dbFile)) {
     fs.unlinkSync(dbFile);
-    console.log('✓ Removed existing database/vedika.db');
+    console.log('✓ Removed existing database/utsavora.db');
   }
   if (fs.existsSync(dbJournal)) {
     fs.unlinkSync(dbJournal);
@@ -27,7 +27,7 @@ try {
 }
 
 // 2. Push schema to database
-console.log('-> Applying schema to database/vedika.db...');
+console.log('-> Applying schema to database/utsavora.db...');
 const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 execSync(`${npxCmd} prisma db push --schema "${schemaPath}" --accept-data-loss`, {
   cwd: backendDir,

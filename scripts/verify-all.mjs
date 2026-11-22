@@ -268,7 +268,7 @@ async function runVerification() {
     if (testUserBookings !== preCounts.userBookings || testUserConvos !== 0) {
       throw new Error(`Test customer is not clean: bookings=${testUserBookings} (expected ${preCounts.userBookings}), convos=${testUserConvos}`);
     }
-    console.log(`  ✓ Test isolation: Test runner executes against database/test.db; vedika.db is untouched.`);
+    console.log(`  ✓ Test isolation: Test runner executes against database/test.db; utsavora.db is untouched.`);
 
     console.log('\n🎉 ALL 5 VERIFICATION SCENARIOS PASSED WITH ZERO ERRORS!');
   } finally {

@@ -40,8 +40,8 @@ const singleHtml = `<!-- GENERATED – do not edit. Run npm run build:standalone
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Vedika – Plan any event within your budget</title>
-  <meta name="description" content="Vedika is an event-planning app (function halls, catering, decoration, band, wedding cards) for Indian families." />
+  <title>Utsavora – Plan any event within your budget</title>
+  <meta name="description" content="Utsavora is an event-planning app (function halls, catering, decoration, band, wedding cards) for Indian families." />
 
   <!-- Google Fonts: Yatra One and Hind with safe system/serif fallbacks -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />

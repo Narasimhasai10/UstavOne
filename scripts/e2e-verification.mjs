@@ -24,7 +24,7 @@ import {
 } from '../frontend/src/services/store.js';
 import dummyVendors from '../frontend/src/data/dummyVendors.json' with { type: 'json' };
 
-console.log('🧪 Starting End-to-End Verification of Vedika Vendor Portal...\n');
+console.log('🧪 Starting End-to-End Verification of Utsavora Vendor Portal...\n');
 
 // 1. Verify index.html structure for double-click file:// execution
 console.log('--- Step 1: Checking root index.html for file:// compatibility ---');
@@ -32,7 +32,7 @@ const indexHtml = fs.readFileSync('index.html', 'utf-8');
 assert.ok(!indexHtml.includes('<script type="module"'), 'Must not contain <script type="module">');
 assert.ok(!indexHtml.includes('src="/'), 'Must not contain absolute root-relative paths like /assets');
 assert.ok(indexHtml.includes('<div id="root"></div>'), 'Must contain root mount node');
-assert.ok(indexHtml.includes('VedikaApp') || indexHtml.includes('function'), 'Must contain bundled app code');
+assert.ok(indexHtml.includes('UtsavoraApp') || indexHtml.includes('function'), 'Must contain bundled app code');
 console.log(`✓ index.html is 100% self-contained (${Math.round(indexHtml.length / 1024)} kB), zero module scripts, zero local fetch calls.\n`);
 
 // 2. Role Choice & Vendor Sign-up with AI Verification & Terms
@@ -44,7 +44,7 @@ const validFssaiResult = await verifyDocument({
   businessName: 'Royal Sweets & Catering'
 });
 assert.equal(validFssaiResult.status, 'Verified', 'Valid 14-digit FSSAI starting with 1 must be Verified');
-console.log('✓ Valid FSSAI (10123456789012): Verified by Vedika AI (pre-check)');
+console.log('✓ Valid FSSAI (10123456789012): Verified by Utsavora AI (pre-check)');
 
 const invalidFssaiResult = await verifyDocument({
   type: 'fssai',

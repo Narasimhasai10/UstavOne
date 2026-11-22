@@ -1,6 +1,6 @@
 # Entity-Relationship Diagram (ERD)
 
-This document visualizes the complete database schema for Vedika (29 models) defined in `database/schema.prisma`.
+This document visualizes the complete database schema for Utsavora (29 models) defined in `database/schema.prisma`.
 
 ```mermaid
 erDiagram

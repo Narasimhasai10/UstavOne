@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🔍 Running Vedika Workspace Integrity & Hygiene Audit...\n');
+console.log('🔍 Running Utsavora Workspace Integrity & Hygiene Audit...\n');
 let failed = false;
 
 function fail(msg) {
@@ -130,6 +130,14 @@ try {
   pass('All component data-service calls are properly awaited.');
 } catch (err) {
   fail('Async data-service usage audit failed.');
+}
+
+// 9. Verify imports, declarations, circular deps & duplicate modules
+try {
+  execSync('node scripts/check-imports.mjs', { cwd: rootDir, stdio: 'inherit' });
+  pass('All frontend imports, declarations, dependencies and module copies are clean.');
+} catch (err) {
+  fail('Frontend import and module integrity audit failed.');
 }
 
 if (failed) {

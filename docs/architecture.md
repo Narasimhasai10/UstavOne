@@ -1,13 +1,13 @@
-# Vedika System Architecture
+# Utsavora System Architecture
 
-This document outlines the architecture, data boundaries, and execution models of the Vedika event-booking marketplace.
+This document outlines the architecture, data boundaries, and execution models of the Utsavora event-booking marketplace.
 
 ---
 
 ## 🏗️ High-Level Structure
 
 ```
-VEDIKA/
+UTSAVORA/
 ├── frontend/          # React 18 + Vite SPA (Client-side portal)
 │   ├── src/           # Components, offline engines, API client
 │   ├── public/        # Static public assets
@@ -27,12 +27,12 @@ VEDIKA/
 │   ├── seed.js        # Automated seed script with test data & Kadapa branches
 │   ├── seed-data/     # Static seed catalogs (planner, locations, dummy vendors)
 │   ├── migrations/    # Prisma migration records
-│   ├── vedika.db      # SQLite database file (git-ignored)
+│   ├── utsavora.db      # SQLite database file (git-ignored)
 │   └── README.md      # Database management guide
 │
 ├── docs/              # System Documentation & Specs
 │   ├── ERD.md         # Mermaid entity-relationship diagram
-│   ├── vedika.http    # REST client test requests
+│   ├── utsavora.http    # REST client test requests
 │   └── architecture.md# This document
 │
 ├── scripts/           # Automation & Verification Scripts
@@ -41,7 +41,7 @@ VEDIKA/
 │   ├── check.mjs               # Workspace hygiene & integrity auditor
 │   ├── db-check.mjs            # Validates database connection & counts
 │   ├── db-reset.mjs            # Drops & re-seeds database cleanly
-│   ├── db-backup.mjs           # Creates timestamped backup of vedika.db
+│   ├── db-backup.mjs           # Creates timestamped backup of utsavora.db
 │   └── e2e-verification.mjs    # End-to-end regression test suite
 │
 ├── index.html         # GENERATED single-file standalone app (file:// compatible)
@@ -71,7 +71,7 @@ VEDIKA/
 
 ### 1. Live Client-Server Mode
 - Frontend runs on `http://localhost:5173` (Vite dev server) or served statically by backend at `http://localhost:4000`.
-- Backend runs on `http://localhost:4000` connected to `database/vedika.db` via Prisma.
+- Backend runs on `http://localhost:4000` connected to `database/utsavora.db` via Prisma.
 - API requests route to `/api/v1/*` with JWT access & refresh tokens.
 - Interactive Swagger documentation lives at `http://localhost:4000/docs`.
 

@@ -1,6 +1,6 @@
-# Vedika Backend & Database Architecture
+# Utsavora Backend & Database Architecture
 
-Production-ready, privacy-first Node.js 20 & Prisma backend for **Vedika** — the event-booking marketplace for Indian families, function halls, caterers, and vendors.
+Production-ready, privacy-first Node.js 20 & Prisma backend for **Utsavora** — the event-booking marketplace for Indian families, function halls, caterers, and vendors.
 
 ---
 
@@ -35,7 +35,7 @@ Interactive OpenAPI Swagger UI is immediately available at:
 | Role | Identifier / Phone | Username | Password | Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | **User** | `9390075877` | — | `sai@1398` | Test customer account (Kadapa) with 0 initial bookings |
-| **Vendor** | `9849012345` | `sai_halls` | `Vedika@123` | Sai Function Halls (2 hall branches, 1 catering branch in Kadapa, 12 months revenue history) |
+| **Vendor** | `9849012345` | `sai_halls` | `Utsavora@123` | Sai Function Halls (2 hall branches, 1 catering branch in Kadapa, 12 months revenue history) |
 | **Admin** | `9999999999` | `admin` | `Admin@12345` | Administrator with document verification & analytics access |
 
 ---
@@ -48,7 +48,7 @@ Configuration is loaded from `backend/.env`.
 | :--- | :--- | :--- |
 | `PORT` | `4000` | Port for Express & Socket.IO server |
 | `DATABASE_URL` | `"file:./dev.db"` | Database connection string (SQLite file or PostgreSQL URI) |
-| `JWT_SECRET` | `"vedika_jwt_secret_dev_2026_secure"` | HMAC-SHA256 secret for signing Access Tokens |
+| `JWT_SECRET` | `"utsavora_jwt_secret_dev_2026_secure"` | HMAC-SHA256 secret for signing Access Tokens |
 | `JWT_EXPIRES_IN` | `"15m"` | Access Token TTL |
 | `REFRESH_TOKEN_EXPIRES_IN` | `"7d"` | Refresh Token TTL |
 | `COMMISSION_RATE` | `0.10` | Platform commission (10%) |
@@ -72,7 +72,7 @@ The database schema is 100% compatible with PostgreSQL with zero code changes:
    ```
 2. Update your `backend/.env`:
    ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/vedika?schema=public"
+   DATABASE_URL="postgresql://user:password@localhost:5432/utsavora?schema=public"
    ```
 3. Run migration:
    ```bash

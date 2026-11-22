@@ -12,3 +12,7 @@ VEDIKA-export.zip
 .test-cache/
 frontend/src/.test-cache/
 /index.html
+*.log
+scripts/fixtures/
+scripts/test-query.mjs
+scripts/test-reproduce-upload.mjs

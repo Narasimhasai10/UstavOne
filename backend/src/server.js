@@ -119,13 +119,13 @@ cron.schedule("* * * * *", async () => {
 // Start Server
 const PORT = config.port || 4000;
 server.listen(PORT, () => {
-  logger.info(`UstavOne backend running on http://localhost:${PORT}`);
+  logger.info(`Utsavora backend running on http://localhost:${PORT}`);
   logger.info(`API Documentation available at http://localhost:${PORT}/docs`);
 });
 
 // Graceful shutdown
 const shutdown = async () => {
-  logger.info("Gracefully shutting down UstavOne backend...");
+  logger.info("Gracefully shutting down Utsavora backend...");
   server.close(async () => {
     await prisma.$disconnect();
     logger.info("Database disconnected. Exiting process.");

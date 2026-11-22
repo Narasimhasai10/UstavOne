@@ -1,3 +1,4 @@
+import './migration.js';
 import { sha256 } from '../utils/cryptoUtils.js';
 import {
   stripPhotoUrlsForStorage,
@@ -34,10 +35,10 @@ import {
 
 /**
  * NOTE ON STORAGE IDENTIFIERS:
- * Internal storage keys and prefixes deliberately retain the 'vedika_*' prefix
- * (e.g. vedika_vendors, vedika_branches_*, vedika_photos_db) to preserve existing
+ * Storage keys use 'utsavora_*' prefix with migration from legacy 'vedika_*'
+ * (e.g. utsavora_vendors, utsavora_branches_*, utsavora_photos_db) to preserve existing
  * user data, credentials, and offline persistence following the application
- * rebranding to "UstavOne".
+ * rebranding to "Utsavora".
  */
 
 // In-memory fallback if localStorage throws on file://
@@ -63,8 +64,8 @@ function storageSet(key, value) {
   } catch (err) {
     console.error('[store] localStorage write error (quota exceeded or restricted):', err);
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vedika:storage-error', { detail: { key, error: err.message } }));
-      window.dispatchEvent(new CustomEvent('vedika:toast', {
+      window.dispatchEvent(new CustomEvent('utsavora:storage-error', { detail: { key, error: err.message } }));
+      window.dispatchEvent(new CustomEvent('utsavora:toast', {
         detail: { message: `Storage save failed: ${err.message}`, type: 'error' }
       }));
     }
@@ -76,11 +77,11 @@ function storageSet(key, value) {
 
 export function dispatchCatalogChanged() {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('vedika:catalog-changed'));
+    window.dispatchEvent(new CustomEvent('utsavora:catalog-changed'));
     try {
       if (typeof BroadcastChannel !== 'undefined') {
-        const bc = new BroadcastChannel('vedika_catalog_channel');
-        bc.postMessage({ type: 'vedika:catalog-changed', timestamp: Date.now() });
+        const bc = new BroadcastChannel('utsavora_catalog_channel');
+        bc.postMessage({ type: 'utsavora:catalog-changed', timestamp: Date.now() });
         bc.close();
       }
     } catch {}
@@ -163,7 +164,7 @@ export const TEST_ACCOUNT = TEST_USER;
  */
 export function seedTestAccount() {
   try {
-    const raw = storageGet('vedika_users');
+    const raw = storageGet('utsavora_users');
     let users = raw ? JSON.parse(raw) : [];
 
     // Purge any customer user from storage that is not one of the three allowed customers
@@ -177,7 +178,7 @@ export function seedTestAccount() {
       return allowedCustomerPhones.has(u.phone);
     });
 
-    // Upsert all three customers into vedika_users
+    // Upsert all three customers into utsavora_users
     for (const testCustomer of TEST_USERS) {
       const idx = users.findIndex(u => u && u.phone === testCustomer.phone);
       if (idx === -1) {
@@ -199,7 +200,7 @@ export function seedTestAccount() {
       }
     }
 
-    storageSet('vedika_users', JSON.stringify(users));
+    storageSet('utsavora_users', JSON.stringify(users));
   } catch (err) {
     console.warn('[store] seedTestAccount failed:', err);
   }
@@ -211,7 +212,7 @@ export function seedTestAccount() {
 export async function authenticateUser(phone, password) {
   try {
     seedTestAccount();
-    const raw = storageGet('vedika_users');
+    const raw = storageGet('utsavora_users');
     const users = raw ? JSON.parse(raw) : [];
     const user = users.find(u => u && u.phone === String(phone).trim());
     if (!user) return { success: false, error: 'No account found with this mobile number.' };
@@ -229,7 +230,7 @@ export async function authenticateUser(phone, password) {
 
 export function getCurrentUser() {
   try {
-    const raw = storageGet('vedika_current_user');
+    const raw = storageGet('utsavora_current_user');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -239,9 +240,9 @@ export function getCurrentUser() {
 export function setCurrentUser(user) {
   try {
     if (user) {
-      storageSet('vedika_current_user', JSON.stringify(user));
+      storageSet('utsavora_current_user', JSON.stringify(user));
     } else {
-      storageRemove('vedika_current_user');
+      storageRemove('utsavora_current_user');
     }
   } catch (err) {
     console.warn('[store] setCurrentUser failed:', err);
@@ -253,7 +254,7 @@ export function setCurrentUser(user) {
  */
 export function isPhoneTaken(phone, excludePhone = '') {
   try {
-    const raw = storageGet('vedika_users');
+    const raw = storageGet('utsavora_users');
     const users = raw ? JSON.parse(raw) : [];
     return users.some(u => u.phone === phone && u.phone !== excludePhone);
   } catch {
@@ -266,7 +267,7 @@ export function isPhoneTaken(phone, excludePhone = '') {
  */
 export async function updateUserProfile(currentPhone, updates) {
   try {
-    const raw = storageGet('vedika_users');
+    const raw = storageGet('utsavora_users');
     let users = raw ? JSON.parse(raw) : [];
     const idx = users.findIndex(u => u.phone === currentPhone);
 
@@ -280,14 +281,14 @@ export async function updateUserProfile(currentPhone, updates) {
     };
 
     users[idx] = updatedUser;
-    storageSet('vedika_users', JSON.stringify(users));
+    storageSet('utsavora_users', JSON.stringify(users));
 
     // Also update if phone changed: migrate bookings
     if (updates.phone && updates.phone !== currentPhone) {
-      const oldBookings = storageGet(`vedika_bookings_${currentPhone}`);
+      const oldBookings = storageGet(`utsavora_bookings_${currentPhone}`);
       if (oldBookings) {
-        storageSet(`vedika_bookings_${updates.phone}`, oldBookings);
-        storageRemove(`vedika_bookings_${currentPhone}`);
+        storageSet(`utsavora_bookings_${updates.phone}`, oldBookings);
+        storageRemove(`utsavora_bookings_${currentPhone}`);
       }
     }
 
@@ -303,7 +304,7 @@ export async function updateUserProfile(currentPhone, updates) {
  */
 export async function changeUserPassword(phone, currentPassword, newPassword) {
   try {
-    const raw = storageGet('vedika_users');
+    const raw = storageGet('utsavora_users');
     let users = raw ? JSON.parse(raw) : [];
     const idx = users.findIndex(u => u.phone === phone);
 
@@ -316,7 +317,7 @@ export async function changeUserPassword(phone, currentPassword, newPassword) {
 
     const newHash = await sha256(newPassword);
     users[idx].passwordHash = newHash;
-    storageSet('vedika_users', JSON.stringify(users));
+    storageSet('utsavora_users', JSON.stringify(users));
 
     const cur = getCurrentUser();
     if (cur && cur.phone === phone) {
@@ -330,11 +331,11 @@ export async function changeUserPassword(phone, currentPassword, newPassword) {
 }
 
 /**
- * Event Selection Persistence (Saved in localStorage as "vedika.event")
+ * Event Selection Persistence (Saved in localStorage as "utsavora.event")
  */
 export function getSelectedEvent() {
   try {
-    return storageGet('vedika.event') || 'wedding';
+    return storageGet('utsavora.event') || 'wedding';
   } catch {
     return 'wedding';
   }
@@ -342,7 +343,7 @@ export function getSelectedEvent() {
 
 export function setSelectedEvent(eventId) {
   try {
-    storageSet('vedika.event', eventId || 'wedding');
+    storageSet('utsavora.event', eventId || 'wedding');
   } catch (err) {
     console.warn('[store] setSelectedEvent failed:', err);
   }
@@ -353,7 +354,7 @@ export function setSelectedEvent(eventId) {
  */
 export function getUserBookings(phone) {
   try {
-    const key = `vedika_bookings_${phone || 'guest'}`;
+    const key = `utsavora_bookings_${phone || 'guest'}`;
     const raw = storageGet(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
@@ -363,10 +364,10 @@ export function getUserBookings(phone) {
 
 export function saveUserBooking(phone, booking) {
   try {
-    const key = `vedika_bookings_${phone || 'guest'}`;
+    const key = `utsavora_bookings_${phone || 'guest'}`;
     const current = getUserBookings(phone);
     const newBooking = {
-      id: booking.id || (`BK-${Date.now().toString(36).toUpperCase()}`),
+      id: booking.id || (`UTS-${Date.now().toString(36).toUpperCase()}`),
       createdAt: new Date().toISOString(),
       status: 'Confirmed',
       paymentStatus: 'Paid',
@@ -413,7 +414,7 @@ export function saveUserBooking(phone, booking) {
         status: booking.status || 'Confirmed',
         utrNumber: booking.utrNumber || ''
       };
-      storageSet(`vedika_vendor_bookings_${vendorUsername}`, JSON.stringify([vBookingRecord, ...vBookings]));
+      storageSet(`utsavora_vendor_bookings_${vendorUsername}`, JSON.stringify([vBookingRecord, ...vBookings]));
     }
 
     return newBooking;
@@ -425,7 +426,7 @@ export function saveUserBooking(phone, booking) {
 
 export function cancelUserBooking(phone, bookingId) {
   try {
-    const key = `vedika_bookings_${phone || 'guest'}`;
+    const key = `utsavora_bookings_${phone || 'guest'}`;
     const current = getUserBookings(phone);
     let target = null;
     const updated = current.map(b => {
@@ -470,7 +471,7 @@ export function cancelUserBooking(phone, bookingId) {
         }
         return vb;
       });
-      storageSet(`vedika_vendor_bookings_${vUser}`, JSON.stringify(vBookings));
+      storageSet(`utsavora_vendor_bookings_${vUser}`, JSON.stringify(vBookings));
     }
     return true;
   } catch (err) {
@@ -513,7 +514,7 @@ export function getActiveChatVendorIds() {
  */
 export function saveUserPlan(plan) {
   try {
-    storageSet('vedika_saved_plan', JSON.stringify({
+    storageSet('utsavora_saved_plan', JSON.stringify({
       plan,
       savedAt: new Date().toISOString()
     }));
@@ -525,7 +526,7 @@ export function saveUserPlan(plan) {
 
 export function getSavedPlan() {
   try {
-    const raw = storageGet('vedika_saved_plan');
+    const raw = storageGet('utsavora_saved_plan');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -859,7 +860,7 @@ export function cleanSeededChats() {
     const seededIds = new Set(['chat_sai_halls_1', 'chat_sai_halls_2', 'chat_sai_halls_3', 'chat_sai_halls_4']);
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('vedika_vendor_chats_')) {
+      if (k && k.startsWith('utsavora_vendor_chats_')) {
         try {
           const raw = storageGet(k);
           if (raw) {
@@ -886,42 +887,42 @@ export function seedTestVendor() {
   try {
     cleanSeededChats();
 
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     let vendors = raw ? JSON.parse(raw) : [];
 
     const existingIdx = vendors.findIndex(v => v && v.username === TEST_VENDOR.username);
     if (existingIdx === -1) {
       vendors.push(TEST_VENDOR);
-      storageSet('vedika_vendors', JSON.stringify(vendors));
+      storageSet('utsavora_vendors', JSON.stringify(vendors));
     } else {
       vendors[existingIdx] = {
         ...TEST_VENDOR,
         ...vendors[existingIdx],
         upiId: vendors[existingIdx].upiId || TEST_VENDOR.upiId
       };
-      storageSet('vedika_vendors', JSON.stringify(vendors));
+      storageSet('utsavora_vendors', JSON.stringify(vendors));
     }
 
     // Seed branches for sai_halls if none exist
-    const branchKey = `vedika_branches_${TEST_VENDOR.username}`;
+    const branchKey = `utsavora_branches_${TEST_VENDOR.username}`;
     if (!storageGet(branchKey)) {
       storageSet(branchKey, JSON.stringify(SEEDED_BRANCHES));
     }
 
     // Seed previous works for sai_halls if none exist
-    const worksKey = `vedika_works_${TEST_VENDOR.username}`;
+    const worksKey = `utsavora_works_${TEST_VENDOR.username}`;
     if (!storageGet(worksKey)) {
       storageSet(worksKey, JSON.stringify(SEEDED_PREVIOUS_WORKS));
     }
 
     // Seed bookings for sai_halls if none exist
-    const bookingsKey = `vedika_vendor_bookings_${TEST_VENDOR.username}`;
+    const bookingsKey = `utsavora_vendor_bookings_${TEST_VENDOR.username}`;
     if (!storageGet(bookingsKey)) {
       storageSet(bookingsKey, JSON.stringify(generateSeededBookings()));
     }
 
     // Initialize vendor chats as empty array - zero fake seeded chats!
-    const chatsKey = `vedika_vendor_chats_${TEST_VENDOR.username}`;
+    const chatsKey = `utsavora_vendor_chats_${TEST_VENDOR.username}`;
     if (!storageGet(chatsKey)) {
       storageSet(chatsKey, JSON.stringify([]));
     }
@@ -935,7 +936,7 @@ export function seedTestVendor() {
  */
 export function migrateKadapaReset() {
   try {
-    if (storageGet('vedika_kadapa_reset') === '1') {
+    if (storageGet('utsavora_kadapa_reset') === '1') {
       return;
     }
     // Delete any branch whose city is Kadapa from localStorage
@@ -946,7 +947,7 @@ export function migrateKadapaReset() {
         if (k) keys.push(k);
       }
       for (const k of keys) {
-        if (k.startsWith('vedika_branches_')) {
+        if (k.startsWith('utsavora_branches_')) {
           try {
             const raw = storageGet(k);
             if (raw) {
@@ -960,7 +961,7 @@ export function migrateKadapaReset() {
         }
       }
     }
-    storageSet('vedika_kadapa_reset', '1');
+    storageSet('utsavora_kadapa_reset', '1');
   } catch (err) {
     console.warn('[store] migrateKadapaReset error:', err);
   }
@@ -971,7 +972,7 @@ export function migrateKadapaReset() {
  */
 export function migrateLowercaseVendorKeys() {
   try {
-    const prefixes = ['vedika_branches_', 'vedika_works_', 'vedika_vendor_bookings_', 'vedika_vendor_chats_'];
+    const prefixes = ['utsavora_branches_', 'utsavora_works_', 'utsavora_vendor_bookings_', 'utsavora_vendor_chats_'];
     if (typeof localStorage !== 'undefined') {
       const keys = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -1011,7 +1012,7 @@ export async function seedCatalogVendors() {
     migrateLowercaseVendorKeys();
     migrateChatData();
 
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     let vendors = raw ? JSON.parse(raw) : [];
 
     const allCatalogVendors = [...SEEDED_RAJAHMUNDRY_VENDORS, ...SEEDED_KADAPA_VENDORS];
@@ -1031,18 +1032,18 @@ export async function seedCatalogVendors() {
         vendors[idx] = { ...vendorRecord, ...vendors[idx], passwordHash: pwdHash, password: cv.password };
       }
     }
-    storageSet('vedika_vendors', JSON.stringify(vendors));
+    storageSet('utsavora_vendors', JSON.stringify(vendors));
 
     // Seed Kadapa Branches & Bookings
     for (const kv of SEEDED_KADAPA_VENDORS) {
       const u = kv.username.toLowerCase();
-      const branchKey = `vedika_branches_${u}`;
+      const branchKey = `utsavora_branches_${u}`;
       const existingBranchesRaw = storageGet(branchKey);
       if (!existingBranchesRaw || JSON.parse(existingBranchesRaw).length === 0) {
         storageSet(branchKey, JSON.stringify(SEEDED_KADAPA_BRANCHES_BY_VENDOR[u] || []));
       }
 
-      const bookingsKey = `vedika_vendor_bookings_${u}`;
+      const bookingsKey = `utsavora_vendor_bookings_${u}`;
       const existingBookingsRaw = storageGet(bookingsKey);
       const seedBookings = SEEDED_KADAPA_BOOKINGS_BY_VENDOR[u] || [];
       if (!existingBookingsRaw || JSON.parse(existingBookingsRaw).length === 0) {
@@ -1057,7 +1058,7 @@ export async function seedCatalogVendors() {
         } catch {}
       }
 
-      const worksKey = `vedika_works_${u}`;
+      const worksKey = `utsavora_works_${u}`;
       if (!storageGet(worksKey)) {
         storageSet(worksKey, JSON.stringify([]));
       }
@@ -1066,7 +1067,7 @@ export async function seedCatalogVendors() {
     // Seed Rajahmundry Branches & Bookings: Ensure district, seed revenue ONLY IF empty
     for (const rv of SEEDED_RAJAHMUNDRY_VENDORS) {
       const u = rv.username.toLowerCase();
-      const branchKey = `vedika_branches_${u}`;
+      const branchKey = `utsavora_branches_${u}`;
       const existingBranchesRaw = storageGet(branchKey);
       if (!existingBranchesRaw) {
         storageSet(branchKey, JSON.stringify(SEEDED_RAJAHMUNDRY_BRANCHES_BY_VENDOR[u] || SEEDED_RAJAHMUNDRY_BRANCHES_BY_VENDOR[rv.username] || []));
@@ -1086,7 +1087,7 @@ export async function seedCatalogVendors() {
         } catch {}
       }
 
-      const bookingsKey = `vedika_vendor_bookings_${u}`;
+      const bookingsKey = `utsavora_vendor_bookings_${u}`;
       const existingBookingsRaw = storageGet(bookingsKey);
       const seedBookings = SEEDED_RAJAHMUNDRY_BOOKINGS_BY_VENDOR[u] || SEEDED_RAJAHMUNDRY_BOOKINGS_BY_VENDOR[rv.username] || [];
       if (!existingBookingsRaw || JSON.parse(existingBookingsRaw).length === 0) {
@@ -1101,7 +1102,7 @@ export async function seedCatalogVendors() {
         } catch {}
       }
 
-      const worksKey = `vedika_works_${u}`;
+      const worksKey = `utsavora_works_${u}`;
       if (!storageGet(worksKey)) {
         storageSet(worksKey, JSON.stringify([]));
       }
@@ -1116,14 +1117,14 @@ export async function seedCatalogVendors() {
           if (k) keys.push(k);
         }
         for (const k of keys) {
-          if (k.startsWith('vedika_branches_')) {
+          if (k.startsWith('utsavora_branches_')) {
             const rawB = storageGet(k);
             if (rawB) {
               const brs = JSON.parse(rawB);
               const { branches: updatedB, changedBranches } = await migrateInlinePhotosToIndexedDB(brs, []);
               if (changedBranches) storageSet(k, JSON.stringify(updatedB));
             }
-          } else if (k.startsWith('vedika_works_')) {
+          } else if (k.startsWith('utsavora_works_')) {
             const rawW = storageGet(k);
             if (rawW) {
               const wrks = JSON.parse(rawW);
@@ -1148,7 +1149,7 @@ export async function authenticateVendor(username, password) {
   try {
     seedTestVendor();
     await seedCatalogVendors();
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     const vendors = raw ? JSON.parse(raw) : [];
     const cleanUser = String(username || '').trim().toLowerCase();
     const vendor = vendors.find(v => v && v.username.toLowerCase() === cleanUser);
@@ -1175,7 +1176,7 @@ export async function authenticateVendor(username, password) {
 
 export function getCurrentVendor() {
   try {
-    const raw = storageGet('vedika_current_vendor');
+    const raw = storageGet('utsavora_current_vendor');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -1185,9 +1186,9 @@ export function getCurrentVendor() {
 export function setCurrentVendor(vendor) {
   try {
     if (vendor) {
-      storageSet('vedika_current_vendor', JSON.stringify(vendor));
+      storageSet('utsavora_current_vendor', JSON.stringify(vendor));
     } else {
-      storageRemove('vedika_current_vendor');
+      storageRemove('utsavora_current_vendor');
     }
   } catch (err) {
     console.warn('[store] setCurrentVendor failed:', err);
@@ -1203,7 +1204,7 @@ export function vendorLogout() {
  */
 export function isUsernameTaken(username, excludeUsername = '') {
   try {
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     const vendors = raw ? JSON.parse(raw) : [];
     const clean = String(username || '').trim().toLowerCase();
     const exclude = String(excludeUsername || '').trim().toLowerCase();
@@ -1219,7 +1220,7 @@ export function isUsernameTaken(username, excludeUsername = '') {
 export async function createVendorAccount(vendorData) {
   try {
     seedTestVendor();
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     const vendors = raw ? JSON.parse(raw) : [];
 
     if (isUsernameTaken(vendorData.username)) {
@@ -1247,12 +1248,12 @@ export async function createVendorAccount(vendorData) {
     };
 
     vendors.push(newVendor);
-    storageSet('vedika_vendors', JSON.stringify(vendors));
+    storageSet('utsavora_vendors', JSON.stringify(vendors));
 
     // A brand-new vendor starts with ZERO branches, bookings, and works
-    storageSet(`vedika_branches_${newVendor.username}`, JSON.stringify([]));
-    storageSet(`vedika_works_${newVendor.username}`, JSON.stringify([]));
-    storageSet(`vedika_vendor_bookings_${newVendor.username}`, JSON.stringify([]));
+    storageSet(`utsavora_branches_${newVendor.username}`, JSON.stringify([]));
+    storageSet(`utsavora_works_${newVendor.username}`, JSON.stringify([]));
+    storageSet(`utsavora_vendor_bookings_${newVendor.username}`, JSON.stringify([]));
 
     setCurrentVendor(newVendor);
     return { success: true, vendor: newVendor };
@@ -1266,7 +1267,7 @@ export async function createVendorAccount(vendorData) {
  */
 export async function updateVendorProfile(username, updates) {
   try {
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     let vendors = raw ? JSON.parse(raw) : [];
     const idx = vendors.findIndex(v => v.username.toLowerCase() === username.toLowerCase());
 
@@ -1287,13 +1288,13 @@ export async function updateVendorProfile(username, updates) {
     };
 
     vendors[idx] = updated;
-    storageSet('vedika_vendors', JSON.stringify(vendors));
+    storageSet('utsavora_vendors', JSON.stringify(vendors));
 
     // Migrate branch/booking keys if username changed
     if (updates.username && updates.username !== username) {
       ['branches', 'works', 'vendor_bookings', 'vendor_chats'].forEach(prefix => {
-        const oldKey = `vedika_${prefix}_${username}`;
-        const newKey = `vedika_${prefix}_${updates.username}`;
+        const oldKey = `utsavora_${prefix}_${username}`;
+        const newKey = `utsavora_${prefix}_${updates.username}`;
         const data = storageGet(oldKey);
         if (data) {
           storageSet(newKey, data);
@@ -1314,7 +1315,7 @@ export async function updateVendorProfile(username, updates) {
  */
 export async function changeVendorPassword(username, currentPassword, newPassword) {
   try {
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     let vendors = raw ? JSON.parse(raw) : [];
     const idx = vendors.findIndex(v => v.username.toLowerCase() === username.toLowerCase());
 
@@ -1327,7 +1328,7 @@ export async function changeVendorPassword(username, currentPassword, newPasswor
 
     const newHash = await sha256(newPassword);
     vendors[idx].passwordHash = newHash;
-    storageSet('vedika_vendors', JSON.stringify(vendors));
+    storageSet('utsavora_vendors', JSON.stringify(vendors));
 
     const cur = getCurrentVendor();
     if (cur && cur.username.toLowerCase() === username.toLowerCase()) {
@@ -1346,7 +1347,7 @@ export async function changeVendorPassword(username, currentPassword, newPasswor
 export function getVendorBranches(username) {
   try {
     const cleanUser = String(username || '').trim().toLowerCase();
-    const key = `vedika_branches_${cleanUser}`;
+    const key = `utsavora_branches_${cleanUser}`;
     const raw = storageGet(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
@@ -1387,7 +1388,7 @@ export async function saveVendorBranch(username, branchData) {
       branches.push(newBranch);
     }
 
-    const ok = storageSet(`vedika_branches_${cleanUser}`, JSON.stringify(branches));
+    const ok = storageSet(`utsavora_branches_${cleanUser}`, JSON.stringify(branches));
     if (!ok) {
       throw new Error('Storage write failed (quota exceeded). Photos are safely stored in IndexedDB.');
     }
@@ -1403,7 +1404,7 @@ export function deleteVendorBranch(username, branchId) {
   try {
     const cleanUser = String(username || '').trim().toLowerCase();
     const branches = getVendorBranches(cleanUser).filter(b => b.id !== branchId);
-    storageSet(`vedika_branches_${cleanUser}`, JSON.stringify(branches));
+    storageSet(`utsavora_branches_${cleanUser}`, JSON.stringify(branches));
     dispatchCatalogChanged();
     return true;
   } catch {
@@ -1417,7 +1418,7 @@ export function deleteVendorBranch(username, branchId) {
 export function getVendorPreviousWorks(username) {
   try {
     const cleanUser = String(username || '').trim().toLowerCase();
-    const key = `vedika_works_${cleanUser}`;
+    const key = `utsavora_works_${cleanUser}`;
     const raw = storageGet(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
@@ -1455,7 +1456,7 @@ export async function saveVendorPreviousWork(username, workData) {
     } else {
       works.push(newWork);
     }
-    const ok = storageSet(`vedika_works_${cleanUser}`, JSON.stringify(works));
+    const ok = storageSet(`utsavora_works_${cleanUser}`, JSON.stringify(works));
     if (!ok) {
       throw new Error('Storage write failed (quota exceeded).');
     }
@@ -1471,7 +1472,7 @@ export function deleteVendorPreviousWork(username, workId) {
   try {
     const cleanUser = String(username || '').trim().toLowerCase();
     const works = getVendorPreviousWorks(cleanUser).filter(w => w.id !== workId);
-    storageSet(`vedika_works_${cleanUser}`, JSON.stringify(works));
+    storageSet(`utsavora_works_${cleanUser}`, JSON.stringify(works));
     dispatchCatalogChanged();
     return true;
   } catch {
@@ -1485,7 +1486,7 @@ export function deleteVendorPreviousWork(username, workId) {
 export function getVendorBookings(username) {
   try {
     const cleanUser = String(username || '').trim().toLowerCase();
-    const key = `vedika_vendor_bookings_${cleanUser}`;
+    const key = `utsavora_vendor_bookings_${cleanUser}`;
     const raw = storageGet(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
@@ -1519,11 +1520,11 @@ export function cancelVendorBooking(username, bookingId, reason, note = '') {
       return b;
     });
 
-    storageSet(`vedika_vendor_bookings_${cleanUser}`, JSON.stringify(updatedVendorBookings));
+    storageSet(`utsavora_vendor_bookings_${cleanUser}`, JSON.stringify(updatedVendorBookings));
 
     // Also synchronize user booking list if customer phone is recorded
     if (targetBooking?.customerPhone) {
-      const userBookingsKey = `vedika_bookings_${targetBooking.customerPhone}`;
+      const userBookingsKey = `utsavora_bookings_${targetBooking.customerPhone}`;
       const userBookings = getUserBookings(targetBooking.customerPhone);
       const updatedUserBookings = userBookings.map(ub => {
         if (ub.id === bookingId) {
@@ -1587,7 +1588,7 @@ export function markBookingCompleted(username, bookingId) {
       }
       return b;
     });
-    storageSet(`vedika_vendor_bookings_${cleanUser}`, JSON.stringify(updated));
+    storageSet(`utsavora_vendor_bookings_${cleanUser}`, JSON.stringify(updated));
     return true;
   } catch {
     return false;
@@ -1614,10 +1615,10 @@ export function confirmVendorBooking(username, bookingId) {
       }
       return b;
     });
-    storageSet(`vedika_vendor_bookings_${cleanUser}`, JSON.stringify(updated));
+    storageSet(`utsavora_vendor_bookings_${cleanUser}`, JSON.stringify(updated));
 
     if (targetBooking?.customerPhone) {
-      const userBookingsKey = `vedika_bookings_${targetBooking.customerPhone}`;
+      const userBookingsKey = `utsavora_bookings_${targetBooking.customerPhone}`;
       const userBookings = getUserBookings(targetBooking.customerPhone);
       const updatedUserBookings = userBookings.map(ub => {
         if (ub.id === bookingId) {
@@ -1655,7 +1656,7 @@ export function addVendorChatMessage(username, threadId, message) {
 export function addVendorWarning(username, reason) {
   try {
     const cleanUser = String(username || '').trim().toLowerCase();
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     let vendors = raw ? JSON.parse(raw) : [];
     const idx = vendors.findIndex(v => v.username.toLowerCase() === cleanUser);
     if (idx === -1) return 1;
@@ -1665,7 +1666,7 @@ export function addVendorWarning(username, reason) {
 
     vendors[idx].warningsCount = currentCount;
     vendors[idx].flaggedForReview = isFlagged;
-    storageSet('vedika_vendors', JSON.stringify(vendors));
+    storageSet('utsavora_vendors', JSON.stringify(vendors));
 
     const cur = getCurrentVendor();
     if (cur && cur.username.toLowerCase() === cleanUser) {
@@ -1685,7 +1686,7 @@ export function addVendorWarning(username, reason) {
  */
 export function getUnifiedVendorsCatalog(baseDummyVendors) {
   try {
-    const raw = storageGet('vedika_vendors');
+    const raw = storageGet('utsavora_vendors');
     const vendors = raw ? JSON.parse(raw) : [];
     const result = {
       halls: [...(baseDummyVendors?.halls || [])],

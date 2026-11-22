@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * VEDIKA Export Script
+ * UTSAVORA Export Script
  * 
- * Creates a clean VEDIKA-export.zip archive of the entire project
+ * Creates a clean Utsavora-export.zip archive of the entire project
  * excluding node_modules, .git, .env, dist, backups, and backend/uploads.
  */
 
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const outputFile = path.join(rootDir, 'VEDIKA-export.zip');
+const outputFile = path.join(rootDir, 'Utsavora-export.zip');
 
 const EXCLUDED_DIRS = new Set([
   'node_modules',
@@ -38,7 +38,7 @@ function shouldExclude(relPath, isDir) {
   }
 
   // Check specific path rules
-  if (norm === 'VEDIKA-export.zip') return true;
+  if (norm === 'Utsavora-export.zip') return true;
   if (norm.endsWith('.db') || norm.endsWith('.db-journal')) return true;
 
   // Exclude .env files but preserve .env.example
@@ -157,7 +157,7 @@ console.log('📦 Scanning project files for clean export...');
 const files = collectFiles(rootDir);
 console.log(`  Found ${files.length} clean source and asset files.`);
 
-console.log('📦 Creating VEDIKA-export.zip...');
+console.log('📦 Creating Utsavora-export.zip...');
 const { buffer: zipBuffer, totalUncompressed } = buildZip(files);
 fs.writeFileSync(outputFile, zipBuffer);
 

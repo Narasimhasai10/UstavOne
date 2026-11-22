@@ -21,7 +21,7 @@ export default defineConfig({
       input: path.resolve(__dirname, 'src/main.jsx'),
       output: {
         format: 'iife',
-        name: 'VedikaApp',
+        name: 'UtsavoraApp',
         inlineDynamicImports: true,
         entryFileNames: 'assets/app.iife.js'
       }
@@ -32,6 +32,10 @@ export default defineConfig({
     open: false,
     proxy: {
       '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true
+      },
+      '/uploads': {
         target: 'http://localhost:4000',
         changeOrigin: true
       }

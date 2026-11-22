@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🚀 Starting Vedika Full-Stack Development Environment...');
+console.log('🚀 Starting Utsavora Full-Stack Development Environment...');
 console.log('  - Backend API: http://localhost:4000 (Swagger docs at /docs)');
 console.log('  - Frontend UI: http://localhost:5173\n');
 

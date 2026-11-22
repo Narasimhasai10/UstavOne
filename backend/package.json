@@ -1,7 +1,7 @@
 {
-  "name": "vedika-backend",
+  "name": "utsavora-backend",
   "version": "1.0.0",
-  "description": "Backend API and Database for UstavOne Event Booking Marketplace",
+  "description": "Utsavora – REST API and WebSocket server built with Express and Prisma",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

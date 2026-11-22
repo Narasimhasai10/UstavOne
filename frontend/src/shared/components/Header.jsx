@@ -91,7 +91,7 @@ export default function Header({
 
   return (
     <header className="top" style={{ position: 'sticky', top: 0, zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4vw', background: 'color-mix(in srgb, var(--ink) 62%, var(--acc))', transition: 'background 0.8s', color: '#FFE7B0' }}>
-      {/* LEFT: Logo "Vedika" with 22px accent circle */}
+      {/* LEFT: Logo "Utsavora" with 22px accent circle */}
       <a
         href="#/dashboard"
         className="logo"
@@ -113,7 +113,7 @@ export default function Header({
             transition: 'background 0.6s'
           }}
         />
-        <span>UstavOne</span>
+        <span>Utsavora</span>
       </a>
 
       {/* RIGHT: (1) Location pill, (2) My bookings pill, (3) Profile picture */}

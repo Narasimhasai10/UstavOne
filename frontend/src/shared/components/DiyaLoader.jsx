@@ -3,7 +3,7 @@ import RealisticDiya from './RealisticDiya.jsx';
 
 /**
  * DiyaLoader
- * A reusable festive loader for Vedika with 3 realistic Indian terracotta oil lamps (diyas).
+ * A reusable festive loader for Utsavora with 3 realistic Indian terracotta oil lamps (diyas).
  *
  * Requirements fulfilled:
  * 1. Preserves underlying page view blurred under backdrop-filter: blur(14px) and rgba(58,10,30,0.45).

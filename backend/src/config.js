@@ -10,9 +10,9 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 export const config = {
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
-  databaseUrl: process.env.DATABASE_URL || 'file:../database/vedika.db',
-  jwtSecret: process.env.JWT_SECRET || 'vedika-dev-jwt-super-secret-key-32chars-min',
-  refreshSecret: process.env.REFRESH_SECRET || 'vedika-dev-refresh-super-secret-key-32chars-min',
+  databaseUrl: process.env.DATABASE_URL || 'file:../database/utsavora.db',
+  jwtSecret: process.env.JWT_SECRET || 'utsavora-dev-jwt-super-secret-key-32chars-min',
+  refreshSecret: process.env.REFRESH_SECRET || 'utsavora-dev-refresh-super-secret-key-32chars-min',
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4173,null')
     .split(',')
     .map(s => s.trim()),
@@ -25,5 +25,7 @@ export const config = {
   holdMinutes: parseInt(process.env.HOLD_MINUTES || '10', 10),
   commissionRate: parseInt(process.env.COMMISSION_RATE || '10', 10),
   gstPercent: parseInt(process.env.GST_PERCENT || '18', 10),
-  warningLimit: 3
+  warningLimit: 3,
+  maxBranchPhotos: parseInt(process.env.MAX_BRANCH_PHOTOS || '12', 10),
+  maxPhotoSizeBytes: parseInt(process.env.MAX_PHOTO_SIZE_BYTES || String(8 * 1024 * 1024), 10)
 };

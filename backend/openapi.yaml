@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: UstavOne Backend API
+  title: Utsavora Backend API
   description: Event-booking marketplace API for Indian families, function halls, caterers, and vendors.
   version: 1.0.0
 servers:
@@ -465,6 +465,118 @@ paths:
       responses:
         '201':
           description: Branch created
+  /vendor/branches/{id}/photos:
+    post:
+      summary: Upload up to 12 photos to branch (multipart/form-data)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Photos uploaded successfully
+        '400':
+          description: Invalid file type, limit exceeded, or file size too large
+        '403':
+          description: Unauthorized (not branch owner)
+  /vendor/photos/{id}:
+    patch:
+      summary: Update photo caption, cover status, or order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                caption:
+                  type: string
+                isCover:
+                  type: boolean
+                order:
+                  type: integer
+      responses:
+        '200':
+          description: Photo updated
+    delete:
+      summary: Delete photo
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Photo deleted
+  /vendor/works/{id}/photos:
+    post:
+      summary: Upload photos to previous work
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Photos uploaded to work
+  /vendor/works/{workId}/photos/{photoId}:
+    delete:
+      summary: Delete photo from previous work
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Work photo deleted
   /vendor/bookings:
     get:
       summary: Vendor received bookings

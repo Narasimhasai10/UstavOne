@@ -9,13 +9,13 @@ const rootDir = path.resolve(__dirname, '..');
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: `file:${path.resolve(rootDir, 'database/vedika.db')}`
+      url: `file:${path.resolve(rootDir, 'database/utsavora.db')}`
     }
   }
 });
 
 async function main() {
-  console.log('🔍 Running Comprehensive Vedika Database Quality & Integrity Audit...\n');
+  console.log('🔍 Running Comprehensive Utsavora Database Quality & Integrity Audit...\n');
 
   let passedAll = true;
 
