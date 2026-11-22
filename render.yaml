@@ -1,0 +1,48 @@
+# Render Blueprint Specification for Utsavora
+# https://render.com/docs/blueprint-spec
+version: "1"
+services:
+  - type: web
+    name: utsavora
+    env: node
+    plan: free
+    region: oregon # or frankfurt, singapore, ohio
+    buildCommand: npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && node scripts/use-db.mjs postgres && npx prisma generate --schema database/schema.prisma && node scripts/db-deploy.mjs && node scripts/db-seed-prod.mjs
+    startCommand: npm run start --prefix backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 26.13.1
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+        # Enter your Neon PostgreSQL connection string (postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require)
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+        # Enter a secure password for the platform administrator (minimum 8 characters)
+      - key: STORAGE_PROVIDER
+        value: cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: utsavora
+      - key: CORS_ORIGINS
+        value: https://utsavora.onrender.com
+      - key: HOLD_MINUTES
+        value: "10"
+      - key: RATE_LIMIT_LOGIN_MAX
+        value: "30"

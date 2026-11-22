@@ -6,6 +6,35 @@ import { config } from "./config.js";
 import { logger } from "./utils/logger.js";
 import { prisma } from "./utils/prisma.js";
 import { verifyAccessToken } from "./utils/jwt.js";
+import { releaseExpiredHolds } from "./modules/planner-bookings-pay/holds.js";
+
+// Production Startup Validation
+if (config.nodeEnv === "production") {
+  const errors = [];
+
+  if (!config.jwtSecret || config.jwtSecret.length < 32 || config.jwtSecret.includes("utsavora-dev-jwt")) {
+    errors.push("JWT_SECRET must be at least 32 characters long and not use the default development secret.");
+  }
+
+  if (!config.refreshSecret || config.refreshSecret.length < 32 || config.refreshSecret.includes("utsavora-dev-refresh")) {
+    errors.push("REFRESH_SECRET must be at least 32 characters long and not use the default development secret.");
+  }
+
+  if (!config.databaseUrl || (!config.databaseUrl.startsWith("postgres://") && !config.databaseUrl.startsWith("postgresql://"))) {
+    errors.push("DATABASE_URL in production must be a valid PostgreSQL connection string starting with postgres:// or postgresql://.");
+  }
+
+  if (!config.adminPassword || config.adminPassword === "Admin@12345" || config.adminPassword.length < 8) {
+    errors.push("ADMIN_PASSWORD must be configured with a secure non-default password (at least 8 characters).");
+  }
+
+  if (errors.length > 0) {
+    logger.fatal({ validationErrors: errors }, "❌ Production startup validation failed. Server halting.");
+    console.error("FATAL: Production environment misconfigured:");
+    errors.forEach(e => console.error(`  - ${e}`));
+    process.exit(1);
+  }
+}
 
 const server = http.createServer(app);
 
@@ -24,7 +53,6 @@ app.set("io", io);
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token || socket.handshake.query?.token;
   if (!token) {
-    // Allow anonymous or handle later
     return next();
   }
 
@@ -58,45 +86,16 @@ io.on("connection", (socket) => {
 });
 
 // SCHEDULED BACKGROUND TASKS (node-cron)
-// 1. Every minute: Expire unpaid booking holds (> 15 minutes) and release date locks
+// 1. Every minute: Expire unpaid booking holds (> config.holdMinutes) and release date locks
 cron.schedule("* * * * *", async () => {
   try {
-    const now = new Date();
-    const expiredBookings = await prisma.booking.findMany({
-      where: {
-        status: "pending_payment",
-        holdExpiresAt: { lt: now }
-      },
-      select: { id: true, code: true }
-    });
-
-    if (expiredBookings.length > 0) {
-      logger.info({ count: expiredBookings.length }, "Expiring unpaid booking holds");
-
-      for (const b of expiredBookings) {
-        await prisma.$transaction(async (tx) => {
-          // Release dates
-          await tx.bookingDate.updateMany({
-            where: { bookingId: b.id },
-            data: {
-              isActive: false,
-              activeKey: null
-            }
-          });
-
-          // Mark booking expired
-          await tx.booking.update({
-            where: { id: b.id },
-            data: {
-              status: "expired",
-              holdExpiresAt: null
-            }
-          });
-        });
-      }
+    const releasedCount = await releaseExpiredHolds(prisma);
+    if (releasedCount > 0) {
+      logger.info({ count: releasedCount }, "Cron: Expired unpaid booking holds released");
     }
 
     // 2. Auto-complete past confirmed bookings
+    const now = new Date();
     const todayYMD = now.toISOString().split("T")[0];
     const completedCount = await prisma.booking.updateMany({
       where: {
@@ -124,16 +123,33 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-const shutdown = async () => {
-  logger.info("Gracefully shutting down Utsavora backend...");
+let isShuttingDown = false;
+const shutdown = async (signal) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`Received ${signal}. Gracefully shutting down Utsavora backend...`);
+
+  // Force close after 10s if hanging
+  const forceTimer = setTimeout(() => {
+    logger.error("Forced process shutdown due to timeout.");
+    process.exit(1);
+  }, 10000);
+  forceTimer.unref();
+
   server.close(async () => {
-    await prisma.$disconnect();
-    logger.info("Database disconnected. Exiting process.");
-    process.exit(0);
+    try {
+      await prisma.$disconnect();
+      logger.info("Database disconnected. Exiting process.");
+      clearTimeout(forceTimer);
+      process.exit(0);
+    } catch (err) {
+      logger.error({ err: err.message }, "Error during Prisma disconnect");
+      process.exit(1);
+    }
   });
 };
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 export { server, io };

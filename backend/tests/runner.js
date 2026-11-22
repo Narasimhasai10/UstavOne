@@ -9,12 +9,29 @@ const backendDir = path.resolve(__dirname, '..');
 const rootDir = path.resolve(__dirname, '../..');
 const testDbPath = path.resolve(rootDir, 'database/test.db').replace(/\\/g, '/');
 const schemaPath = path.resolve(rootDir, 'database/schema.prisma');
+const prodDbPath = path.resolve(rootDir, 'database/utsavora.db').replace(/\\/g, '/');
 
 console.log('🧪 Starting Backend Test Suite in Isolated Database Mode...');
 console.log(`  - Target test database: ${testDbPath}`);
 
+// Safety Guard: verify testDbPath is strictly test.db and not production utsavora.db
+const resolvedDbFile = path.basename(testDbPath).toLowerCase();
+if (resolvedDbFile !== 'test.db') {
+  console.error(`❌ [SAFETY GUARD] Refusing to run tests: test database must be named "test.db", got: "${resolvedDbFile}"`);
+  process.exit(1);
+}
+if (path.resolve(testDbPath).toLowerCase() === path.resolve(prodDbPath).toLowerCase()) {
+  console.error(`❌ [SAFETY GUARD] Refusing to run tests: test database matches production database (${prodDbPath})`);
+  process.exit(1);
+}
+
+// Ensure process.env has test variables set for current process and child processes
+process.env.DATABASE_URL = `file:${testDbPath}`;
+process.env.TEST_DB = testDbPath;
+process.env.NODE_ENV = 'test';
+
 // 1. Clean up any previous test.db and journals
-for (const p of [testDbPath, `${testDbPath}-journal`]) {
+for (const p of [testDbPath, `${testDbPath}-journal`, `${testDbPath}-wal`, `${testDbPath}-shm`]) {
   if (fs.existsSync(p)) {
     try { fs.unlinkSync(p); } catch {}
   }
@@ -23,8 +40,23 @@ for (const p of [testDbPath, `${testDbPath}-journal`]) {
 const testEnv = {
   ...process.env,
   DATABASE_URL: `file:${testDbPath}`,
+  TEST_DB: testDbPath,
   NODE_ENV: 'test'
 };
+
+function findTestFiles(dir) {
+  const files = [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...findTestFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith('.test.js')) {
+      files.push(fullPath);
+    }
+  }
+  return files.sort();
+}
 
 try {
   // 2. Push schema to test.db
@@ -45,12 +77,13 @@ try {
   });
 
   const { seedDatabase } = await import('../../database/seed.js');
-  await seedDatabase(testPrisma);
+  await seedDatabase(testPrisma, { allowDestructive: true });
   await testPrisma.$disconnect();
 
-  // 4. Run tests targeting test.db
-  console.log('  - Executing test runner...\n');
-  const testProc = spawnSync('node', ['--test', 'tests/**/*.test.js'], {
+  // 4. Run tests targeting test.db with explicit file list
+  const testFiles = findTestFiles(path.join(backendDir, 'tests')).map(f => path.relative(backendDir, f));
+  console.log(`  - Executing test runner with ${testFiles.length} test files...\n`);
+  const testProc = spawnSync(process.execPath, ['--test', ...testFiles], {
     cwd: backendDir,
     env: testEnv,
     stdio: 'inherit'
@@ -58,7 +91,7 @@ try {
 
   // 5. Clean up test.db
   console.log('\n🧹 Cleaning up isolated test database...');
-  for (const p of [testDbPath, `${testDbPath}-journal`]) {
+  for (const p of [testDbPath, `${testDbPath}-journal`, `${testDbPath}-wal`, `${testDbPath}-shm`]) {
     if (fs.existsSync(p)) {
       try { fs.unlinkSync(p); } catch {}
     }
@@ -68,7 +101,7 @@ try {
 } catch (err) {
   console.error('❌ Test isolation error:', err);
   // Attempt cleanup on failure
-  for (const p of [testDbPath, `${testDbPath}-journal`]) {
+  for (const p of [testDbPath, `${testDbPath}-journal`, `${testDbPath}-wal`, `${testDbPath}-shm`]) {
     if (fs.existsSync(p)) {
       try { fs.unlinkSync(p); } catch {}
     }

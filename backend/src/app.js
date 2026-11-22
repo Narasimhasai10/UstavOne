@@ -6,7 +6,9 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import yaml from "yaml";
 import swaggerUi from "swagger-ui-express";
+import compression from "compression";
 import { config } from "./config.js";
+import { prisma } from "./utils/prisma.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,15 +21,54 @@ import chatCallsModule from "./modules/chat-calls/index.js";
 import vendorDocsStorageModule from "./modules/vendor-docs-storage/index.js";
 
 const app = express();
+const isProd = config.nodeEnv === "production";
 
-// Security headers
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: false
-}));
+// Enable reverse-proxy trust for correct client IP detection, rate limiting and secure headers on Render
+app.set("trust proxy", 1);
 
-// CORS setup supporting Vite dev, previews, and local file:// origin
-const allowedOrigins = [
+// HTTP response compression (gzip/deflate)
+app.use(compression());
+
+// Security headers with CSP
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: isProd
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: [
+              "'self'",
+              "'unsafe-inline'",
+              "https://fonts.googleapis.com"
+            ],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+            imgSrc: [
+              "'self'",
+              "data:",
+              "blob:",
+              "https://res.cloudinary.com",
+              "https://images.unsplash.com"
+            ],
+            connectSrc: [
+              "'self'",
+              "ws:",
+              "wss:",
+              "http://localhost:*",
+              "https://*.render.com",
+              "https://res.cloudinary.com"
+            ],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+          }
+        }
+      : false
+  })
+);
+
+// CORS setup supporting Vite dev, previews, production origins, and local file:// origin
+const defaultLocalOrigins = [
   "http://localhost:5173",
   "http://localhost:4173",
   "http://127.0.0.1:5173",
@@ -36,18 +77,42 @@ const allowedOrigins = [
   "http://127.0.0.1:4000"
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin === "null") {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive for local dev & testing
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Check configured CORS origins or default local origins
+      if (
+        config.corsOrigins.includes(origin) ||
+        defaultLocalOrigins.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      // Handle file:// / null origin
+      if (origin === "null") {
+        if (!isProd || config.allowFileOrigin || config.corsOrigins.includes("null")) {
+          return callback(null, true);
+        }
+        return callback(new Error("CORS origin 'null' not allowed in production"));
+      }
+
+      // Permissive in dev/test
+      if (!isProd) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  })
+);
 
 // Body parsers
 app.use(express.json({ limit: "10mb" }));
@@ -57,7 +122,11 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 const uploadBase = config.uploadDir ? path.resolve(config.uploadDir) : path.resolve(__dirname, "../uploads");
 const publicUploads = path.resolve(uploadBase, "public");
 if (!fs.existsSync(publicUploads)) {
-  fs.mkdirSync(publicUploads, { recursive: true });
+  try {
+    fs.mkdirSync(publicUploads, { recursive: true });
+  } catch {
+    // Ephemeral or read-only container fallback
+  }
 }
 const staticUploadOptions = {
   maxAge: "7d",
@@ -68,7 +137,7 @@ const staticUploadOptions = {
 app.use("/uploads/public", express.static(publicUploads, staticUploadOptions));
 app.use("/uploads", express.static(uploadBase, staticUploadOptions));
 
-// Serve static frontend build if present (e.g. for npm start)
+// Serve static frontend build if present (e.g. for npm start / Render full-stack service)
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
 const rootIndex = path.resolve(__dirname, "../../index.html");
 if (fs.existsSync(frontendDist)) {
@@ -88,28 +157,36 @@ try {
       customSiteTitle: "Utsavora API Documentation"
     }));
   }
-} catch (e) {
+} catch {
   // Silent swagger fallback
 }
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    uptimeSec: Math.round(process.uptime()),
-    timestamp: new Date().toISOString()
-  });
-});
+// Health check handler verifying database connectivity
+const handleHealthCheck = async (req, res) => {
+  let dbStatus = "ok";
+  let dbError = null;
+  try {
+    await prisma.$queryRawUnsafe("SELECT 1");
+  } catch (err) {
+    dbStatus = "error";
+    dbError = err.message;
+  }
 
-app.get("/api/v1/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    version: "1.0.0",
+  const isHealthy = dbStatus === "ok";
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? "healthy" : "degraded",
+    db: dbStatus,
     service: "utsavora-backend",
+    version: "1.0.0",
     uptimeSec: Math.round(process.uptime()),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    ...(dbError ? { error: dbError } : {})
   });
-});
+};
+
+app.get("/health", handleHealthCheck);
+app.get("/api/v1/health", handleHealthCheck);
+app.get("/api/v1/public/health", handleHealthCheck);
 
 // Feature Module Routes mounted under /api/v1
 app.use("/api/v1", authUsersAdminModule);

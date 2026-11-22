@@ -17,7 +17,13 @@
     "verify:all": "node scripts/verify-all-e2e.mjs",
     "db:check": "node scripts/db-check.mjs",
     "db:reset": "node scripts/db-reset.mjs",
-    "db:backup": "node scripts/db-backup.mjs"
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:use:sqlite": "node scripts/use-db.mjs sqlite",
+    "db:use:postgres": "node scripts/use-db.mjs postgres",
+    "db:deploy": "node scripts/db-deploy.mjs",
+    "db:seed": "node database/seed.js",
+    "db:seed:prod": "node scripts/db-seed-prod.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

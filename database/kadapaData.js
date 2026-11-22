@@ -78,7 +78,11 @@ export const KADAPA_VENDORS = [
   }
 ];
 
-export async function deleteOldKadapaHallsAndCaterers(targetPrisma, kadapaCity) {
+export async function deleteOldKadapaHallsAndCaterers(targetPrisma, kadapaCity, options = {}) {
+  if (options && options.canRunDestructive === false) {
+    console.log('[SKIP] destructive cleanup (pass --allow-destructive to enable)');
+    return;
+  }
   console.log('-> Deleting old Kadapa halls and caterers from database...');
 
   const saiUser = await targetPrisma.user.findUnique({ where: { username: 'sai_halls' } });
@@ -163,11 +167,15 @@ export async function deleteOldKadapaHallsAndCaterers(targetPrisma, kadapaCity) 
   }
 }
 
-export async function seedKadapaVendorsAndBranches(targetPrisma, kadapaCity) {
+export async function seedKadapaVendorsAndBranches(targetPrisma, kadapaCity, options = {}) {
   console.log('-> Seeding Kadapa 6 vendors & 6 branches...');
 
   // Step 1: Delete stale Kadapa branches
-  await deleteOldKadapaHallsAndCaterers(targetPrisma, kadapaCity);
+  if (options?.canRunDestructive) {
+    await deleteOldKadapaHallsAndCaterers(targetPrisma, kadapaCity, options);
+  } else {
+    console.log('[SKIP] destructive cleanup (pass --allow-destructive to enable)');
+  }
 
   // Step 2: Create/upsert the 6 vendor accounts with lowercase usernames
   const vendorMap = new Map();

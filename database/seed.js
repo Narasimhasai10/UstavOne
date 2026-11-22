@@ -68,8 +68,62 @@ const DEMO_OWNER_NAMES = [
   'Kiran Varma', 'Mohan Rao', 'Narasimha Murthy', 'Praveen Kumar'
 ];
 
+export function maskDatabaseUrl(url) {
+  if (!url) return '(unspecified)';
+  try {
+    return url.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
+  } catch {
+    return url;
+  }
+}
+
+export function getResolvedDatabaseFilePath(dbUrl) {
+  if (!dbUrl || typeof dbUrl !== 'string') return null;
+  if (!dbUrl.startsWith('file:')) return null;
+  let p = dbUrl.slice(5).split('?')[0];
+  p = p.replace(/^\/([a-zA-Z]:)/, '$1');
+  if (path.isAbsolute(p)) {
+    return path.resolve(p).replace(/\\/g, '/');
+  }
+  return path.resolve(__dirname, p).replace(/\\/g, '/');
+}
+
+export function validateTestDatabaseIsolation(targetDbUrl, rootDirectory = path.resolve(__dirname, '..')) {
+  const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.TEST_DB);
+  if (!isTest) return;
+
+  const resolved = getResolvedDatabaseFilePath(targetDbUrl);
+  if (!resolved) {
+    throw new Error(`[SAFETY GUARD] NODE_ENV=test or TEST_DB is active, but target database is not a local file URL: ${targetDbUrl}`);
+  }
+
+  const baseName = path.basename(resolved).toLowerCase();
+  const prodDb = path.resolve(rootDirectory, 'database/utsavora.db').replace(/\\/g, '/').toLowerCase();
+  const normalized = path.resolve(resolved).replace(/\\/g, '/').toLowerCase();
+
+  if (baseName !== 'test.db') {
+    throw new Error(`[SAFETY GUARD] Refusing to run in test mode: database file must be named "test.db", but got "${path.basename(resolved)}" (${resolved})`);
+  }
+
+  if (normalized === prodDb) {
+    throw new Error(`[SAFETY GUARD] Refusing to run in test mode: target database resolves to production database (${resolved})`);
+  }
+}
+
+export async function isTargetDatabaseEmpty(targetPrisma) {
+  try {
+    const [branchCount, bookingCount, userCount] = await Promise.all([
+      targetPrisma.branch.count(),
+      targetPrisma.booking.count(),
+      targetPrisma.user.count()
+    ]);
+    return branchCount === 0 && bookingCount === 0 && userCount === 0;
+  } catch {
+    return false;
+  }
+}
+
 function generateSvgImage({ title, emoji, caption, filename, uploadsDir }) {
-  const filePath = path.join(uploadsDir, filename);
   const cleanTitle = (title || 'Utsavora Venue').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const cleanCaption = (caption || 'Verified Partner').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
@@ -86,19 +140,80 @@ function generateSvgImage({ title, emoji, caption, filename, uploadsDir }) {
   <text x="400" y="320" font-family="system-ui, sans-serif" font-size="26" font-weight="bold" fill="#F8EBD8" text-anchor="middle">${cleanTitle}</text>
   <text x="400" y="365" font-family="system-ui, sans-serif" font-size="16" fill="#E8B84A" text-anchor="middle">${cleanCaption}</text>
 </svg>`;
-  fs.writeFileSync(filePath, svg, 'utf8');
+
+  let savedPath = `/uploads/public/${filename}`;
+  if (uploadsDir) {
+    try {
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      fs.writeFileSync(path.join(uploadsDir, filename), svg, 'utf8');
+    } catch {
+      savedPath = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+  }
+
+  // Cloudinary fallback or container without persistent disk
+  if (process.env.STORAGE_PROVIDER === 'cloudinary' && (!process.env.CLOUDINARY_URL && !process.env.CLOUDINARY_CLOUD_NAME)) {
+    savedPath = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
   return {
-    path: `/uploads/public/${filename}`,
+    path: savedPath,
     sizeBytes: Buffer.byteLength(svg, 'utf8')
   };
 }
 
-export async function seedDatabase(targetPrisma = prisma) {
-  console.log('🌱 Starting database seeding...');
+export async function seedDatabase(targetPrisma = prisma, options = {}) {
+  const isDryRun = process.argv.includes('--dry-run') || Boolean(options?.dryRun);
+  const mode = options?.mode || process.env.SEED_MODE || 'demo';
+
+  // Resolve target database URL from environment or Prisma instance
+  let targetDb = process.env.DATABASE_URL;
+  if (!targetDb && targetPrisma?._engineConfig?.overrideDatasources?.db?.url) {
+    const raw = targetPrisma._engineConfig.overrideDatasources.db.url;
+    targetDb = typeof raw === 'string' ? raw : raw?.value;
+  }
+  if (!targetDb && targetPrisma?._engineConfig?.datasources?.[0]?.url) {
+    const raw = targetPrisma._engineConfig.datasources[0].url;
+    targetDb = typeof raw === 'string' ? raw : raw?.value;
+  }
+  if (!targetDb) {
+    targetDb = 'file:../database/utsavora.db';
+  }
+
+  const resolvedDbPath = getResolvedDatabaseFilePath(targetDb);
+  console.log(`[DB] Target database: ${resolvedDbPath || maskDatabaseUrl(targetDb)}`);
+
+  // Validate test database isolation guard
+  validateTestDatabaseIsolation(targetDb);
+
+  const allowDestructive = process.argv.includes('--allow-destructive') || Boolean(options?.allowDestructive);
+  const isDbEmpty = await isTargetDatabaseEmpty(targetPrisma);
+  const canRunDestructive = isDbEmpty || allowDestructive;
+
+  if (isDryRun) {
+    console.log(`🔍 [DRY RUN] Simulating database seed (mode: ${mode})...`);
+    console.log('  - Would seed/upsert planner configurations');
+    console.log('  - Would seed/upsert core cities and states');
+    console.log('  - Would upsert 3 customer accounts');
+    console.log('  - Would upsert platform administrator');
+    if (mode === 'minimal') {
+      console.log('  - [Minimal Mode] Would verify essential test vendor and branches only if needed');
+    } else {
+      console.log('  - [Demo Mode] Would seed full catalog, branches, sample bookings, and notifications');
+    }
+    console.log('✅ [DRY RUN] Simulation complete. No database changes were made.');
+    return;
+  }
+
+  console.log(`🌱 Starting database seeding (mode: ${mode})...`);
 
   const uploadsDir = path.resolve(__dirname, '../backend/uploads/public');
   if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+    try {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    } catch {
+      // Ephemeral disk fallback
+    }
   }
 
   // 1. Seed Planner Config
@@ -188,22 +303,24 @@ export async function seedDatabase(targetPrisma = prisma) {
   // 3. Seed Exactly 3 Clean Customer Users (ZERO bookings, ZERO chats)
   console.log('-> Seeding 3 clean customer users (9390075877, 6305729847, 9963773539)...');
 
-  // Purge any existing customer users who are not in the exact three
-  const allowedCustomerPhones = ['9390075877', '6305729847', '9963773539'];
-  const strayCustomers = await targetPrisma.user.findMany({
-    where: {
-      role: 'user',
-      NOT: { phone: { in: allowedCustomerPhones } }
-    },
-    select: { id: true }
-  });
-  if (strayCustomers.length > 0) {
-    const strayIds = strayCustomers.map(u => u.id);
-    await targetPrisma.refreshToken.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.plan.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.notification.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.contactViolation.deleteMany({ where: { userId: { in: strayIds } } });
-    await targetPrisma.user.deleteMany({ where: { id: { in: strayIds } } });
+  // Purge any existing customer users who are not in the exact three ONLY in demo mode with destructive allowed, NEVER in production/minimal
+  if (canRunDestructive && mode !== 'minimal' && process.env.NODE_ENV !== 'production') {
+    const allowedCustomerPhones = ['9390075877', '6305729847', '9963773539'];
+    const strayCustomers = await targetPrisma.user.findMany({
+      where: {
+        role: 'user',
+        NOT: { phone: { in: allowedCustomerPhones } }
+      },
+      select: { id: true }
+    });
+    if (strayCustomers.length > 0) {
+      const strayIds = strayCustomers.map(u => u.id);
+      await targetPrisma.refreshToken.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.plan.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.notification.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.contactViolation.deleteMany({ where: { userId: { in: strayIds } } });
+      await targetPrisma.user.deleteMany({ where: { id: { in: strayIds } } });
+    }
   }
 
   const customersToSeed = [
@@ -272,7 +389,8 @@ export async function seedDatabase(targetPrisma = prisma) {
 
   // 4. Seed Admin
   console.log('-> Seeding admin...');
-  const adminPasswordHash = await bcrypt.hash('Admin@12345', 10);
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@12345';
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
   await targetPrisma.user.upsert({
     where: { username: 'admin' },
     update: {
@@ -514,6 +632,13 @@ export async function seedDatabase(targetPrisma = prisma) {
     }
   }
 
+  // If running in minimal mode (e.g. production baseline), finish here cleanly
+  if (mode === 'minimal') {
+    console.log('✅ [Minimal Mode] Core configuration, cities, customer accounts, administrator, and essential vendor base seeded.');
+    console.log('✅ Seeding completed successfully!');
+    return;
+  }
+
   // 6. Seed ~39 Platform Vendor Accounts & Distribute dummyVendors.json
   console.log('-> Seeding 39 platform vendors & distributing catalog...');
   const dummyVendorsPath = path.resolve(__dirname, 'seed-data/dummyVendors.json');
@@ -730,14 +855,16 @@ export async function seedDatabase(targetPrisma = prisma) {
 
   // 6b. Seed Rajahmundry 6 Vendors & 8 Branches (Function Halls & Caterings)
   const rajahmundryCity = cityRecords.get('rajahmundry') || await targetPrisma.city.findFirst({ where: { city: 'Rajahmundry' } });
-  const rajahmundryVendorMap = await seedRajahmundryVendorsAndBranches(targetPrisma, rajahmundryCity);
+  const rajahmundryVendorMap = await seedRajahmundryVendorsAndBranches(targetPrisma, rajahmundryCity, { canRunDestructive });
 
   // 6c. Seed Kadapa 6 Vendors & 6 Branches (Function Halls & Caterings)
-  const kadapaVendorMap = await seedKadapaVendorsAndBranches(targetPrisma, kadapaCity);
+  const kadapaVendorMap = await seedKadapaVendorsAndBranches(targetPrisma, kadapaCity, { canRunDestructive });
 
   // Service Listings: Decor, Band, Cards, Photo
   console.log('-> Seeding service listings...');
-  await targetPrisma.serviceListing.deleteMany({});
+  if (canRunDestructive) {
+    await targetPrisma.serviceListing.deleteMany({});
+  }
   for (const d of (dummy.decor || [])) {
     const cityRec = cityRecords.get((d.city || 'Kadapa').toLowerCase());
     await targetPrisma.serviceListing.create({
@@ -798,9 +925,11 @@ export async function seedDatabase(targetPrisma = prisma) {
 
   // 7. Seed Placeholder Media: FileRecord + Photo rows
   console.log('-> Generating placeholder images & photos...');
-  await targetPrisma.photo.deleteMany({});
-  await targetPrisma.fileRecord.deleteMany({});
-  await targetPrisma.previousWork.deleteMany({});
+  if (canRunDestructive) {
+    await targetPrisma.photo.deleteMany({});
+    await targetPrisma.fileRecord.deleteMany({});
+    await targetPrisma.previousWork.deleteMany({});
+  }
 
   // 1 cover photo for each other branch (excluding Kadapa and Rajahmundry)
   const allOtherBranches = await targetPrisma.branch.findMany({
@@ -831,140 +960,152 @@ export async function seedDatabase(targetPrisma = prisma) {
   }
 
   // 9. Clean up any bookings, booking dates, payments, payouts, refunds and chats
-  console.log('-> Cleaning up bookings, booking dates, payments, payouts, refunds & chats...');
-  await targetPrisma.bookingDate.deleteMany({});
-  await targetPrisma.refund.deleteMany({});
-  await targetPrisma.payout.deleteMany({});
-  await targetPrisma.payment.deleteMany({});
-  await targetPrisma.review.deleteMany({});
-  await targetPrisma.booking.deleteMany({});
-  await targetPrisma.call.deleteMany({});
-  await targetPrisma.message.deleteMany({});
-  await targetPrisma.conversation.deleteMany({});
+  if (canRunDestructive) {
+    console.log('-> Cleaning up bookings, booking dates, payments, payouts, refunds & chats...');
+    await targetPrisma.bookingDate.deleteMany({});
+    await targetPrisma.refund.deleteMany({});
+    await targetPrisma.payout.deleteMany({});
+    await targetPrisma.payment.deleteMany({});
+    await targetPrisma.review.deleteMany({});
+    await targetPrisma.booking.deleteMany({});
+    await targetPrisma.call.deleteMany({});
+    await targetPrisma.message.deleteMany({});
+    await targetPrisma.conversation.deleteMany({});
 
-  // Seed sample completed bookings for Rajahmundry & Kadapa vendors (Track Revenue)
-  await seedRajahmundrySampleBookings(targetPrisma, rajahmundryVendorMap);
-  await seedKadapaSampleBookings(targetPrisma, kadapaVendorMap);
+    // Seed sample completed bookings for Rajahmundry & Kadapa vendors (Track Revenue)
+    await seedRajahmundrySampleBookings(targetPrisma, rajahmundryVendorMap);
+    await seedKadapaSampleBookings(targetPrisma, kadapaVendorMap);
+  } else {
+    console.log('[SKIP] destructive cleanup (pass --allow-destructive to enable)');
+  }
 
   const now = new Date();
 
   // AvailabilityBlock Rows for 3 Future Dates
-  console.log('-> Seeding 3 AvailabilityBlock rows for future dates...');
-  await targetPrisma.availabilityBlock.deleteMany({});
-  const blockDates = [
-    { branchId: 'h-kad-dsr-paradise', offsetDays: 5, reason: 'Hall Deep Cleaning & Floor Polishing' },
-    { branchId: 'h-kad-dsr-paradise', offsetDays: 21, reason: 'Private Family Ceremony' },
-    { branchId: 'h-kad-madhavi-conv', offsetDays: 49, reason: 'Stage Lighting & Audio Upgrades' }
-  ];
+  if (canRunDestructive) {
+    console.log('-> Seeding 3 AvailabilityBlock rows for future dates...');
+    await targetPrisma.availabilityBlock.deleteMany({});
+    const blockDates = [
+      { branchId: 'h-kad-dsr-paradise', offsetDays: 5, reason: 'Hall Deep Cleaning & Floor Polishing' },
+      { branchId: 'h-kad-dsr-paradise', offsetDays: 21, reason: 'Private Family Ceremony' },
+      { branchId: 'h-kad-madhavi-conv', offsetDays: 49, reason: 'Stage Lighting & Audio Upgrades' }
+    ];
 
-  for (const blk of blockDates) {
-    const d = new Date(now.getTime() + blk.offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    await targetPrisma.availabilityBlock.create({
-      data: {
-        branchId: blk.branchId,
-        date: d,
-        reason: blk.reason
-      }
-    });
-  }
-
-  // 10. Seed MenuItems for catering branches
-  console.log('-> Seeding menu items for catering branches...');
-  await targetPrisma.menuItem.deleteMany({});
-  const menuItems = [
-    // Starters Veg
-    { name: 'Paneer Tikka', category: 'Starters', isVeg: true },
-    { name: 'Crispy Corn Kernels', category: 'Starters', isVeg: true },
-    { name: 'Veg Spring Rolls', category: 'Starters', isVeg: true },
-    // Starters Non-Veg
-    { name: 'Andhra Chilli Chicken', category: 'Starters', isVeg: false },
-    { name: 'Mutton Seekh Kebab', category: 'Starters', isVeg: false },
-    { name: 'Apollo Fish Fry', category: 'Starters', isVeg: false },
-    // Main Course Veg
-    { name: 'Gutti Vankaya Kura', category: 'Main Course', isVeg: true },
-    { name: 'Paneer Butter Masala', category: 'Main Course', isVeg: true },
-    { name: 'Tomato Dal with Ghee', category: 'Main Course', isVeg: true },
-    { name: 'Gongura Pachadi', category: 'Main Course', isVeg: true },
-    // Main Course Non-Veg
-    { name: 'Rayalaseema Natu Kodi Pulusu', category: 'Main Course', isVeg: false },
-    { name: 'Dum Hyderabadi Mutton Biryani', category: 'Main Course', isVeg: false },
-    { name: 'Gongura Mamsam', category: 'Main Course', isVeg: false },
-    // Breads & Rice
-    { name: 'Butter Naan', category: 'Breads & Rice', isVeg: true },
-    { name: 'Ragi Sangati', category: 'Breads & Rice', isVeg: true },
-    { name: 'Steamed Sona Masoori Rice', category: 'Breads & Rice', isVeg: true },
-    { name: 'Curd Rice with Pomegranate', category: 'Breads & Rice', isVeg: true },
-    // Desserts
-    { name: 'Garam Gulab Jamun with Rabdi', category: 'Desserts', isVeg: true },
-    { name: 'Dry Fruit Bobbatlu / Puran Poli', category: 'Desserts', isVeg: true },
-    { name: 'Kaju Carrot Halwa', category: 'Desserts', isVeg: true }
-  ];
-
-  // Seed menu items for other catering branches (excluding Rajahmundry & Kadapa specific branches)
-  const cateringBranches = await targetPrisma.branch.findMany({
-    where: { kind: 'catering', NOT: { id: { in: [...KADAPA_BRANCH_IDS, ...RAJAHMUNDRY_BRANCH_IDS] } } }
-  });
-  for (const cb of cateringBranches) {
-    for (const item of menuItems) {
-      await targetPrisma.menuItem.create({
+    for (const blk of blockDates) {
+      const d = new Date(now.getTime() + blk.offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      await targetPrisma.availabilityBlock.create({
         data: {
-          branchId: cb.id,
-          name: item.name,
-          category: item.category,
-          isVeg: item.isVeg
+          branchId: blk.branchId,
+          date: d,
+          reason: blk.reason
         }
       });
     }
   }
 
-  // Seed custom menu items for Rajahmundry & Kadapa catering branches
-  await seedRajahmundryMenuItems(targetPrisma);
-  await seedKadapaMenuItems(targetPrisma);
+  // 10. Seed MenuItems for catering branches
+  if (canRunDestructive) {
+    console.log('-> Seeding menu items for catering branches...');
+    await targetPrisma.menuItem.deleteMany({});
+    const menuItems = [
+      // Starters Veg
+      { name: 'Paneer Tikka', category: 'Starters', isVeg: true },
+      { name: 'Crispy Corn Kernels', category: 'Starters', isVeg: true },
+      { name: 'Veg Spring Rolls', category: 'Starters', isVeg: true },
+      // Starters Non-Veg
+      { name: 'Andhra Chilli Chicken', category: 'Starters', isVeg: false },
+      { name: 'Mutton Seekh Kebab', category: 'Starters', isVeg: false },
+      { name: 'Apollo Fish Fry', category: 'Starters', isVeg: false },
+      // Main Course Veg
+      { name: 'Gutti Vankaya Kura', category: 'Main Course', isVeg: true },
+      { name: 'Paneer Butter Masala', category: 'Main Course', isVeg: true },
+      { name: 'Tomato Dal with Ghee', category: 'Main Course', isVeg: true },
+      { name: 'Gongura Pachadi', category: 'Main Course', isVeg: true },
+      // Main Course Non-Veg
+      { name: 'Rayalaseema Natu Kodi Pulusu', category: 'Main Course', isVeg: false },
+      { name: 'Dum Hyderabadi Mutton Biryani', category: 'Main Course', isVeg: false },
+      { name: 'Gongura Mamsam', category: 'Main Course', isVeg: false },
+      // Breads & Rice
+      { name: 'Butter Naan', category: 'Breads & Rice', isVeg: true },
+      { name: 'Ragi Sangati', category: 'Breads & Rice', isVeg: true },
+      { name: 'Steamed Sona Masoori Rice', category: 'Breads & Rice', isVeg: true },
+      { name: 'Curd Rice with Pomegranate', category: 'Breads & Rice', isVeg: true },
+      // Desserts
+      { name: 'Garam Gulab Jamun with Rabdi', category: 'Desserts', isVeg: true },
+      { name: 'Dry Fruit Bobbatlu / Puran Poli', category: 'Desserts', isVeg: true },
+      { name: 'Kaju Carrot Halwa', category: 'Desserts', isVeg: true }
+    ];
 
-  // 11. Seed Platform & Vendor Notifications
-  console.log('-> Seeding notifications...');
-  await targetPrisma.notification.deleteMany({});
-  const notifications = [
-    { userId: testVendor.id, type: 'booking', title: 'New Booking Confirmed', body: 'Booking VED-CONF-1001 has been confirmed and advance received.' },
-    { userId: testVendor.id, type: 'payment', title: 'Payout Processed', body: 'Payout of ₹3,06,000 for completed event was transferred.' },
-    { userId: testVendor.id, type: 'chat', title: 'New Customer Inquiry', body: 'Customer inquiry received regarding wedding availability.' },
-    { userId: testVendor.id, type: 'document', title: 'Document Verified', body: 'FoSCoS FSSAI licence has been verified successfully.' },
-    { userId: testVendor.id, type: 'review', title: 'New 5-Star Review', body: 'A customer left a 5-star review for Sai Function Hall - Main Town.' },
-    { userId: testVendor.id, type: 'system', title: 'Platform Policy Update', body: 'Standard hospitality GST & commission calculation updated.' },
-    { userId: testVendor.id, type: 'alert', title: 'Hold Active', body: 'A temporary 10-minute hold is currently active for VED-HOLD-1001.' }
-  ];
+    // Seed menu items for other catering branches (excluding Rajahmundry & Kadapa specific branches)
+    const cateringBranches = await targetPrisma.branch.findMany({
+      where: { kind: 'catering', NOT: { id: { in: [...KADAPA_BRANCH_IDS, ...RAJAHMUNDRY_BRANCH_IDS] } } }
+    });
+    for (const cb of cateringBranches) {
+      for (const item of menuItems) {
+        await targetPrisma.menuItem.create({
+          data: {
+            branchId: cb.id,
+            name: item.name,
+            category: item.category,
+            isVeg: item.isVeg
+          }
+        });
+      }
+    }
 
-  for (const n of notifications) {
-    await targetPrisma.notification.create({ data: n });
+    // Seed custom menu items for Rajahmundry & Kadapa catering branches
+    await seedRajahmundryMenuItems(targetPrisma);
+    await seedKadapaMenuItems(targetPrisma);
   }
 
-  // Contact Violations for demo vendor
-  console.log('-> Seeding contact violations for demo vendor...');
-  await targetPrisma.contactViolation.deleteMany({});
-  const flaggedVendor = createdVendors[0].user;
-  await targetPrisma.contactViolation.create({
-    data: {
-      userId: flaggedVendor.id,
-      pattern: 'Direct mobile number 9849012345 detected in message body'
+  // 11. Seed Platform & Vendor Notifications
+  if (canRunDestructive) {
+    console.log('-> Seeding notifications...');
+    await targetPrisma.notification.deleteMany({});
+    const notifications = [
+      { userId: testVendor.id, type: 'booking', title: 'New Booking Confirmed', body: 'Booking VED-CONF-1001 has been confirmed and advance received.' },
+      { userId: testVendor.id, type: 'payment', title: 'Payout Processed', body: 'Payout of ₹3,06,000 for completed event was transferred.' },
+      { userId: testVendor.id, type: 'chat', title: 'New Customer Inquiry', body: 'Customer inquiry received regarding wedding availability.' },
+      { userId: testVendor.id, type: 'document', title: 'Document Verified', body: 'FoSCoS FSSAI licence has been verified successfully.' },
+      { userId: testVendor.id, type: 'review', title: 'New 5-Star Review', body: 'A customer left a 5-star review for Sai Function Hall - Main Town.' },
+      { userId: testVendor.id, type: 'system', title: 'Platform Policy Update', body: 'Standard hospitality GST & commission calculation updated.' },
+      { userId: testVendor.id, type: 'alert', title: 'Hold Active', body: 'A temporary 10-minute hold is currently active for VED-HOLD-1001.' }
+    ];
+
+    for (const n of notifications) {
+      await targetPrisma.notification.create({ data: n });
     }
-  });
-  await targetPrisma.contactViolation.create({
-    data: {
-      userId: flaggedVendor.id,
-      pattern: 'WhatsApp keyword wa.me detected in quotation'
-    }
-  });
-  await targetPrisma.vendorProfile.update({
-    where: { userId: flaggedVendor.id },
-    data: { warningsCount: 2 }
-  });
+
+    // Contact Violations for demo vendor
+    console.log('-> Seeding contact violations for demo vendor...');
+    await targetPrisma.contactViolation.deleteMany({});
+    const flaggedVendor = createdVendors[0].user;
+    await targetPrisma.contactViolation.create({
+      data: {
+        userId: flaggedVendor.id,
+        pattern: 'Direct mobile number 9849012345 detected in message body'
+      }
+    });
+    await targetPrisma.contactViolation.create({
+      data: {
+        userId: flaggedVendor.id,
+        pattern: 'WhatsApp keyword wa.me detected in quotation'
+      }
+    });
+    await targetPrisma.vendorProfile.update({
+      where: { userId: flaggedVendor.id },
+      data: { warningsCount: 2 }
+    });
+  }
 
   console.log('✅ Seeding completed successfully!');
 }
 
 async function main() {
+  const isDryRun = process.argv.includes('--dry-run');
+  const mode = process.env.SEED_MODE || 'demo';
   try {
-    await seedDatabase(prisma);
+    await seedDatabase(prisma, { dryRun: isDryRun, mode });
   } catch (e) {
     console.error('❌ Seeding failed:', e);
     process.exit(1);

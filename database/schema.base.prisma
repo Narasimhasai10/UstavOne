@@ -1,0 +1,536 @@
+// __DATASOURCE_BLOCK__
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String    @id @default(cuid())
+  role           String    @default("user") // "user" | "vendor" | "admin"
+  name           String
+  phone          String    @unique
+  email          String?   @unique
+  username       String?   @unique
+  passwordHash   String
+  photoFileId    String?
+  city           String?
+  state          String?
+  pincode        String?
+  lat            Float?
+  lon            Float?
+  locationSource String?   @default("auto") // "auto" | "manual"
+  isActive       Boolean   @default(true)
+  failedLogins   Int       @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  refreshTokens  RefreshToken[]
+  vendorProfile  VendorProfile?
+  branches       Branch[]
+  bookings       Booking[]          @relation("UserBookings")
+  vendorBookings Booking[]          @relation("VendorBookings")
+  reviews        Review[]
+  plans          Plan[]
+  notifications  Notification[]
+  sentMessages   Message[]
+  userConversations   Conversation[] @relation("UserConversations")
+  vendorConversations Conversation[] @relation("VendorConversations")
+  contactViolations   ContactViolation[]
+
+  @@index([role])
+  @@index([phone])
+  @@index([email])
+  @@index([username])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model VendorProfile {
+  userId                 String   @id @unique
+  ownerType              String   // "hall" | "catering" | "both"
+  hallBusinessName       String?
+  cateringBusinessName   String?
+  termsVersion           String   @default("v1.0")
+  termsAcceptedAt        DateTime @default(now())
+  warningsCount          Int      @default(0)
+  status                 String   @default("active") // "active" | "flagged" | "suspended"
+  commissionRateOverride Float?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model City {
+  id              String   @id @default(cuid())
+  state           String
+  city            String
+  priceMultiplier Float    @default(1.0)
+  createdAt       DateTime @default(now())
+
+  branches Branch[]
+
+  @@unique([state, city])
+  @@index([city])
+  @@index([state])
+}
+
+model Branch {
+  id           String   @id @default(cuid())
+  vendorId     String
+  kind         String   // "hall" | "catering"
+  name         String
+  description  String?
+  addressLine  String?
+  area         String?
+  cityId       String
+  pincode      String?
+  lat          Float?
+  lon          Float?
+  status       String   @default("under_review") // "verified" | "under_review" | "rejected" | "inactive"
+  ratingAvg    Float    @default(4.5)
+  ratingCount  Int      @default(0)
+  bookingsCount Int     @default(0)
+  amenities    String?  // JSON stringified array of amenities
+  coverPhotoId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vendor       User                 @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  city         City                 @relation(fields: [cityId], references: [id])
+  hallDetails  HallDetails?
+  catererDetails CatererDetails?
+  plateRates   PlateRate[]
+  menuItems    MenuItem[]
+  photos       Photo[]
+  works        PreviousWork[]
+  blocks       AvailabilityBlock[]
+  bookings     Booking[]
+  bookingDates BookingDate[]
+  documents    Document[]
+  reviews      Review[]
+  conversations Conversation[]
+
+  @@index([vendorId])
+  @@index([cityId])
+  @@index([kind])
+  @@index([status])
+  @@index([ratingAvg])
+}
+
+model HallDetails {
+  branchId           String   @id @unique
+  capacity           Int
+  acMode             String   @default("both") // "ac" | "non_ac" | "both"
+  priceFullDayNonAc  Int
+  priceFullDayAc     Int
+  priceHalfDay       Int?
+  parking            String?
+  rooms              Int      @default(2)
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+}
+
+model CatererDetails {
+  branchId      String  @id @unique
+  cuisines      String? // JSON array e.g. ["andhra", "south indian"]
+  servingStyles String? // JSON array e.g. ["buffet", "banana leaf"]
+  foodTypes     String? // JSON array e.g. ["veg", "nonveg", "both"]
+  minPlates     Int     @default(50)
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+}
+
+model PlateRate {
+  id        String @id @default(cuid())
+  branchId  String
+  category  String // "basic" | "standard" | "premium" | "luxury"
+  foodType  String // "veg" | "nonveg"
+  price     Int
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([category])
+}
+
+model MenuItem {
+  id        String  @id @default(cuid())
+  branchId  String
+  name      String
+  category  String
+  isVeg     Boolean @default(true)
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+}
+
+model ServiceListing {
+  id          String   @id @default(cuid())
+  kind        String   // "decor" | "band" | "cards" | "photography" | "educational_addon"
+  vendorId    String?  // null if platform-managed
+  name        String
+  cityId      String?  // null = all cities
+  level       String?  // "low" | "medium" | "high" (decor only)
+  price       Int
+  priceUnit   String   @default("fixed") // "fixed" | "per_card"
+  rating      Float    @default(4.5)
+  description String?
+  tags        String?  // JSON array
+
+  @@index([kind])
+  @@index([cityId])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  vendorId   String
+  branchId   String?
+  type       String   // "trade_licence" | "fssai"
+  number     String
+  fileId     String?
+  status     String   @default("pending") // "pending" | "verified" | "needs_review" | "rejected"
+  checks     String?  // JSON array of check objects
+  reasons    String?  // JSON array of reason strings
+  reviewedBy String?
+  createdAt  DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([type, number])
+  @@index([vendorId])
+  @@index([status])
+}
+
+model FileRecord {
+  id        String   @id @default(cuid())
+  ownerId   String
+  purpose   String   // "photo" | "document" | "avatar" | "work"
+  path      String
+  mime      String
+  sizeBytes Int
+  width     Int?
+  height    Int?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([purpose])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  branchId  String?
+  workId    String?
+  fileId    String
+  caption   String?
+  isCover   Boolean  @default(false)
+  sortOrder Int      @default(0)
+
+  branch Branch?       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  work   PreviousWork? @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([workId])
+}
+
+model PreviousWork {
+  id        String   @id @default(cuid())
+  branchId  String
+  title     String
+  eventType String?
+  eventDate String?
+  guests    Int?
+  caption   String?
+  createdAt DateTime @default(now())
+
+  branch Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  photos Photo[]
+
+  @@index([branchId])
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  branchId  String
+  date      String   // YYYY-MM-DD
+  reason    String?
+  createdAt DateTime @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, date])
+  @@index([branchId])
+  @@index([date])
+}
+
+model Booking {
+  id             String    @id @default(cuid())
+  code           String    @unique // e.g. VED-2026-0001
+  userId         String
+  vendorId       String
+  branchId       String
+  kind           String    // "hall" | "catering" | "combined"
+  eventType      String
+  startDate      String    // YYYY-MM-DD
+  endDate        String    // YYYY-MM-DD
+  slot           String    @default("full_day") // "morning" | "evening" | "full_day" | "custom"
+  startTime      String?
+  endTime        String?
+  guests         Int
+  options        String?   // JSON object with detailed selections
+  planId         String?
+  priceBreakdown String?   // JSON object with full quote breakdown
+  subtotal       Int
+  gst            Int
+  total          Int
+  commission     Int
+  vendorPayout   Int
+  status         String    @default("pending_payment") // "pending_payment" | "confirmed" | "completed" | "cancelled_by_user" | "cancelled_by_vendor" | "expired"
+  paymentStatus  String    @default("unpaid") // "unpaid" | "paid" | "refund_pending" | "refunded"
+  holdExpiresAt  DateTime?
+  cancelReason   String?
+  cancelNote     String?
+  cancelledAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  user         User          @relation("UserBookings", fields: [userId], references: [id])
+  vendor       User          @relation("VendorBookings", fields: [vendorId], references: [id])
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  bookingDates BookingDate[]
+  payments     Payment[]
+  payout       Payout?
+  review       Review?
+
+  @@index([userId])
+  @@index([vendorId])
+  @@index([branchId])
+  @@index([status])
+  @@index([startDate])
+}
+
+model BookingDate {
+  id        String  @id @default(cuid())
+  bookingId String
+  branchId  String
+  date      String  // YYYY-MM-DD
+  slot      String  // "morning" | "evening" | "full_day" | "custom"
+  isActive  Boolean @default(true)
+  activeKey String? @default("ACTIVE") // null when inactive, "ACTIVE" when active
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, date, slot, activeKey])
+  @@index([branchId, date, slot])
+  @@index([bookingId])
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  bookingId         String
+  provider          String   @default("mock") // "mock" | "razorpay"
+  providerOrderId   String?
+  providerPaymentId String?
+  method            String   @default("upi") // "upi" | "card" | "netbanking" | "wallet"
+  amount            Int
+  status            String   @default("created") // "created" | "paid" | "failed" | "refunded"
+  idempotencyKey    String   @unique
+  rawPayload        String?  // JSON string
+  createdAt         DateTime @default(now())
+
+  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  refunds Refund[]
+
+  @@index([bookingId])
+  @@index([status])
+  @@index([idempotencyKey])
+}
+
+model Refund {
+  id        String   @id @default(cuid())
+  paymentId String
+  bookingId String
+  amount    Int
+  status    String   @default("initiated") // "initiated" | "processed" | "failed"
+  reason    String?
+  createdAt DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([bookingId])
+}
+
+model Payout {
+  id         String    @id @default(cuid())
+  vendorId   String
+  bookingId  String    @unique
+  gross      Int
+  commission Int
+  net        Int
+  status     String    @default("pending") // "pending" | "paid_out"
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([status])
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  userId        String
+  vendorId      String
+  branchId      String
+  planId        String?
+  lastMessageAt DateTime @default(now())
+
+  user     User      @relation("UserConversations", fields: [userId], references: [id])
+  vendor   User      @relation("VendorConversations", fields: [vendorId], references: [id])
+  branch   Branch    @relation(fields: [branchId], references: [id])
+  messages Message[]
+  calls    Call[]
+
+  @@unique([userId, branchId])
+  @@index([userId])
+  @@index([vendorId])
+  @@index([branchId])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String
+  senderRole     String    // "user" | "vendor" | "system"
+  type           String    @default("text") // "text" | "system" | "call_log"
+  body           String
+  status         String    @default("sent") // "sent" | "delivered" | "read"
+  createdAt      DateTime  @default(now())
+  readAt         DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model ContactViolation {
+  id             String   @id @default(cuid())
+  userId         String
+  conversationId String?
+  pattern        String
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Call {
+  id             String    @id @default(cuid())
+  conversationId String
+  callerId       String
+  calleeId       String
+  status         String    @default("ringing") // "ringing" | "connected" | "ended" | "missed"
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  durationSec    Int       @default(0)
+  providerRef    String?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([callerId])
+  @@index([calleeId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  userId    String
+  branchId  String
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([userId])
+}
+
+model Plan {
+  id         String   @id @default(cuid())
+  userId     String?
+  eventType  String
+  cityId     String
+  input      String   // JSON string of input answers
+  result     String   // JSON string of plan output
+  shareToken String?  @unique
+  isSaved    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cityId])
+  @@index([shareToken])
+}
+
+model PlannerConfig {
+  key   String @id @unique
+  value String // JSON string
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([readAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      String?  // JSON string
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
+}

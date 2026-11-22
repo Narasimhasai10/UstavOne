@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { prisma } from "../../utils/prisma.js";
 import { requireAuth } from "../auth-users-admin/auth.middleware.js";
 import { pricingService } from "./pricing.js";
+import { releaseExpiredHolds } from "./holds.js";
+import { config } from "../../config.js";
 
 const router = Router();
 
@@ -14,6 +16,9 @@ router.post("/quote", async (req, res, next) => {
     if (!branchId || !startDate) {
       return res.status(400).json({ error: { message: "branchId and startDate are required" } });
     }
+
+    // Lazy release expired holds
+    await releaseExpiredHolds(prisma);
 
     const branch = await prisma.branch.findUnique({
       where: { id: branchId },
@@ -89,6 +94,9 @@ router.post("/", requireAuth, async (req, res, next) => {
 
     // Run in Prisma transaction to guarantee atomic double-booking prevention
     const booking = await prisma.$transaction(async (tx) => {
+      // 0. Lazy release expired holds within the transaction
+      await releaseExpiredHolds(tx);
+
       // 1. Check vendor manual blocks
       const blocks = await tx.availabilityBlock.findMany({
         where: {
@@ -130,7 +138,7 @@ router.post("/", requireAuth, async (req, res, next) => {
 
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
       const code = `UTS-${new Date().getFullYear()}-${randomSuffix}`;
-      const holdExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins hold
+      const holdExpiresAt = new Date(Date.now() + (config.holdMinutes || 10) * 60 * 1000); // Configurable hold (default 10 mins)
 
       // 4. Create Booking
       const newBooking = await tx.booking.create({
