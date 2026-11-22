@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 
-import { verifyDocument } from '../src/utils/verify.js';
-import { checkContactDetails } from '../src/utils/contactGuard.js';
+import { verifyDocument } from '../frontend/src/utils/verify.js';
+import { checkContactDetails } from '../frontend/src/utils/contactGuard.js';
 import {
   seedTestAccount,
   seedTestVendor,
@@ -21,8 +21,8 @@ import {
   getUserBookings,
   saveUserBooking,
   getUnifiedVendorsCatalog
-} from '../src/services/store.js';
-import dummyVendors from '../src/data/dummyVendors.json' with { type: 'json' };
+} from '../frontend/src/services/store.js';
+import dummyVendors from '../frontend/src/data/dummyVendors.json' with { type: 'json' };
 
 console.log('🧪 Starting End-to-End Verification of Vedika Vendor Portal...\n');
 

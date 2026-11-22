@@ -5,8 +5,19 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const distDir = path.resolve(rootDir, 'dist');
+
+// Check frontend/dist first, fallback to root dist
+let distDir = path.resolve(rootDir, 'frontend/dist');
+if (!fs.existsSync(distDir)) {
+  distDir = path.resolve(rootDir, 'dist');
+}
 const assetsDir = path.resolve(distDir, 'assets');
+
+if (!fs.existsSync(assetsDir)) {
+  console.error('❌ [Single-File Builder] Assets directory not found:', assetsDir);
+  console.error('Please run "npm run build --prefix frontend" first.');
+  process.exit(1);
+}
 
 // Find built JS and CSS files
 const assetFiles = fs.readdirSync(assetsDir);
@@ -14,7 +25,7 @@ const jsFile = assetFiles.find(f => f.endsWith('.js') && f.length > 5);
 const cssFile = assetFiles.find(f => f.endsWith('.css'));
 
 if (!jsFile) {
-  console.error('No JS bundle found in dist/assets!');
+  console.error('❌ [Single-File Builder] No JS bundle found in assets directory!');
   process.exit(1);
 }
 
@@ -22,7 +33,9 @@ const jsContent = fs.readFileSync(path.join(assetsDir, jsFile), 'utf-8');
 const cssContent = cssFile ? fs.readFileSync(path.join(assetsDir, cssFile), 'utf-8') : '';
 
 // Create self-contained single-file HTML
-const singleHtml = `<!DOCTYPE html>
+// First line must be the exact generated header comment:
+const singleHtml = `<!-- GENERATED – do not edit. Run npm run build:standalone. -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -32,7 +45,7 @@ const singleHtml = `<!DOCTYPE html>
 
   <!-- Google Fonts: Yatra One and Hind with safe system/serif fallbacks -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
   <link href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&family=Yatra+One&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23FF5C8A'/><path d='M16 8c-2 4-4 6-4 9a4 4 0 0 0 8 0c0-3-2-5-4-9z' fill='%23E8B84A'/></svg>" />
 
@@ -65,6 +78,8 @@ ${jsContent}
 
 // Write to root index.html and dist/index.html
 fs.writeFileSync(path.join(rootDir, 'index.html'), singleHtml, 'utf-8');
-fs.writeFileSync(path.join(distDir, 'index.html'), singleHtml, 'utf-8');
+if (fs.existsSync(distDir)) {
+  fs.writeFileSync(path.join(distDir, 'index.html'), singleHtml, 'utf-8');
+}
 
 console.log(`✅ [Single-File Builder] Successfully built self-contained root index.html (${Math.round(singleHtml.length / 1024)} kB)`);
