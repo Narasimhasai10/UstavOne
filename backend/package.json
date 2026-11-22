@@ -1,0 +1,37 @@
+{
+  "name": "vedika-backend",
+  "version": "1.0.0",
+  "description": "Backend API and Database for UstavOne Event Booking Marketplace",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "npx prisma migrate dev --schema ../database/schema.prisma",
+    "db:push": "npx prisma db push --schema ../database/schema.prisma",
+    "db:generate": "npx prisma generate --schema ../database/schema.prisma",
+    "db:seed": "node ../database/seed.js",
+    "test": "node tests/runner.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "socket.io": "^4.8.1",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.4.1"
+  }
+}

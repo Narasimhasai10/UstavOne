@@ -1,0 +1,1 @@
+export { default } from '../modules/chat-calls/chat.routes.js';

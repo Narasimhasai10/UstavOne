@@ -1,0 +1,1 @@
+export { default } from '../modules/vendor-docs-storage/vendor.routes.js';

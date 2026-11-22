@@ -1,0 +1,1 @@
+export { default } from '../modules/auth-users-admin/notifications.routes.js';

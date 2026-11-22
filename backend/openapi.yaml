@@ -1,0 +1,526 @@
+openapi: 3.0.3
+info:
+  title: UstavOne Backend API
+  description: Event-booking marketplace API for Indian families, function halls, caterers, and vendors.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development server
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+  /public/locations:
+    get:
+      summary: Get supported cities and state groupings
+      responses:
+        '200':
+          description: List of states and cities
+  /public/events:
+    get:
+      summary: Supported event types
+      responses:
+        '200':
+          description: Event metadata and recommended defaults
+  /public/terms:
+    get:
+      summary: Vendor platform terms and conditions
+      responses:
+        '200':
+          description: Terms text and version
+
+  # AUTH
+  /auth/user/signup:
+    post:
+      summary: Customer signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, phone, password]
+              properties:
+                name: { type: string }
+                phone: { type: string, example: "9390075877" }
+                password: { type: string, example: "sai@1398" }
+                city: { type: string }
+      responses:
+        '201':
+          description: User created
+  /auth/user/login:
+    post:
+      summary: Customer login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, password]
+              properties:
+                phone: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Authentication tokens returned
+  /auth/vendor/signup:
+    post:
+      summary: Vendor registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, phone, username, password, ownerType]
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                username: { type: string }
+                password: { type: string }
+                ownerType: { type: string, enum: [hall, catering, both] }
+                hallBusinessName: { type: string }
+                cateringBusinessName: { type: string }
+                termsAccepted: { type: boolean }
+      responses:
+        '201':
+          description: Vendor registered
+  /auth/vendor/login:
+    post:
+      summary: Vendor login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier: { type: string, description: "Phone or username" }
+                password: { type: string }
+      responses:
+        '200':
+          description: Authentication tokens returned
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token and get new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: New tokens issued
+  /auth/me:
+    get:
+      summary: Get current authenticated user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+  /auth/verify-document:
+    post:
+      summary: Automated document verification (FSSAI / Trade Licence)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, number]
+              properties:
+                type: { type: string, enum: [trade_licence, fssai] }
+                number: { type: string }
+                branchId: { type: string }
+      responses:
+        '200':
+          description: Verification result and checklist
+
+  # VENDORS (PUBLIC)
+  /vendors:
+    get:
+      summary: Browse vendor branches with filters
+      parameters:
+        - name: kind
+          in: query
+          schema: { type: string, enum: [all, hall, catering] }
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: verifiedOnly
+          in: query
+          schema: { type: boolean }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: List of vendor branches (privacy sanitized)
+  /vendors/{id}:
+    get:
+      summary: Detailed vendor branch profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Complete branch details, hall/catering specs, photos, reviews
+  /vendors/{id}/availability:
+    get:
+      summary: Monthly availability calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: month
+          in: query
+          required: true
+          schema: { type: string, example: "2026-12" }
+      responses:
+        '200':
+          description: List of booked and blocked dates
+  /vendors/{id}/reviews:
+    get:
+      summary: Public customer reviews
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Customer reviews with masked author names
+
+  # PLANNER
+  /planner:
+    post:
+      summary: Calculate smart AI event plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType, totalBudget, guestCount, city]
+              properties:
+                eventType: { type: string, example: "wedding" }
+                totalBudget: { type: integer, example: 800000 }
+                guestCount: { type: integer, example: 600 }
+                city: { type: string, example: "Kadapa" }
+                priorities: { type: object }
+      responses:
+        '200':
+          description: Feasibility, category budget breakdown, top 3 vendors
+    get:
+      summary: List user's saved plans
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Saved plans list
+  /planner/save:
+    post:
+      summary: Save calculated plan to user account
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [input, result]
+      responses:
+        '201':
+          description: Plan saved
+  /planner/{id}/share:
+    post:
+      summary: Generate shareable link token
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Share token and link
+
+  # BOOKINGS
+  /bookings/quote:
+    post:
+      summary: Calculate price quote without booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [branchId, startDate]
+              properties:
+                branchId: { type: string }
+                startDate: { type: string }
+                endDate: { type: string }
+                slot: { type: string }
+                guests: { type: integer }
+      responses:
+        '200':
+          description: Subtotal, GST, total, commission, and vendor payout
+  /bookings:
+    post:
+      summary: Create booking with 15-minute hold lock
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [branchId, startDate, guests]
+              properties:
+                branchId: { type: string }
+                startDate: { type: string }
+                endDate: { type: string }
+                slot: { type: string }
+                guests: { type: integer }
+                options: { type: object }
+      responses:
+        '201':
+          description: Booking created with hold lock
+        '409':
+          description: Date/slot already booked or blocked
+    get:
+      summary: List current user bookings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Bookings list
+  /bookings/{id}/cancel:
+    post:
+      summary: Cancel booking with tiered refund policy
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Booking cancelled and refund processed according to policy
+
+  # PAYMENTS
+  /payments/create-order:
+    post:
+      summary: Create payment order with gateway / mock
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId]
+              properties:
+                bookingId: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        '200':
+          description: Payment order ready
+  /payments/confirm:
+    post:
+      summary: Confirm payment and lock booking
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId]
+              properties:
+                bookingId: { type: string }
+                providerOrderId: { type: string }
+                providerPaymentId: { type: string }
+      responses:
+        '200':
+          description: Booking confirmed and receipt generated
+
+  # CHAT
+  /chat/conversations:
+    get:
+      summary: List user or vendor conversations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Conversations with privacy-masked counterpart info
+  /chat/conversations/{id}/messages:
+    get:
+      summary: Get messages in conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Message thread
+    post:
+      summary: Send message with contact sharing filter
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+      responses:
+        '201':
+          description: Message delivered
+        '422':
+          description: Contact information blocked (phone, WhatsApp, UPI, URLs)
+
+  # CALLS
+  /calls/initiate:
+    post:
+      summary: Initiate masked in-app call
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId]
+              properties:
+                conversationId: { type: string }
+      responses:
+        '200':
+          description: Ringing initiated with masked caller/callee labels
+
+  # VENDOR PORTAL
+  /vendor/profile:
+    get:
+      summary: Vendor dashboard profile and branches
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Vendor profile
+  /vendor/branches:
+    get:
+      summary: Vendor branches with pricing, photos, and works
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Vendor branch list
+    post:
+      summary: Create new branch
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Branch created
+  /vendor/bookings:
+    get:
+      summary: Vendor received bookings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Bookings without user phone/email
+  /vendor/revenue/summary:
+    get:
+      summary: Financial revenue summary and stats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Gross, net, platform fee, completed bookings count
+  /vendor/revenue/series:
+    get:
+      summary: 12-month historical revenue trends
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Month-by-month revenue series with growth percentage
+
+  # ADMIN
+  /admin/vendors:
+    get:
+      summary: Admin vendors list and document review
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All registered vendors
+  /admin/stats:
+    get:
+      summary: System overview statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User counts, booking counts, total revenue
+
+  # NOTIFICATIONS
+  /notifications:
+    get:
+      summary: Current user notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User notifications list
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

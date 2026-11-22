@@ -1,0 +1,10 @@
+/* ==========================================================================
+   USTAVONE (FORMERLY VEDIKA) MODULAR DESIGN SYSTEM & COMPONENT STYLES
+   Organized into feature and shared stylesheets
+   ========================================================================== */
+
+@import './shared/styles/base.css';
+@import './features/home-auth/home-auth.css';
+@import './features/dashboard-plan/dashboard-plan.css';
+@import './features/booking-chat/booking-chat.css';
+@import './features/vendor/vendor.css';

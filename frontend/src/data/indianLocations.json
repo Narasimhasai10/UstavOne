@@ -1,0 +1,45 @@
+{
+  "Andhra Pradesh": [
+    "Vijayawada",
+    "Visakhapatnam",
+    "Guntur",
+    "Tirupati",
+    "Nellore",
+    "Rajahmundry",
+    "Kakinada",
+    "Kurnool"
+  ],
+  "Telangana": [
+    "Hyderabad",
+    "Warangal",
+    "Karimnagar",
+    "Nizamabad",
+    "Khammam"
+  ],
+  "Tamil Nadu": [
+    "Chennai",
+    "Coimbatore",
+    "Madurai",
+    "Tiruchirappalli",
+    "Salem"
+  ],
+  "Karnataka": [
+    "Bengaluru",
+    "Mysuru",
+    "Mangaluru",
+    "Hubballi"
+  ],
+  "Kerala": [
+    "Kochi",
+    "Thiruvananthapuram",
+    "Kozhikode"
+  ],
+  "Maharashtra": [
+    "Mumbai",
+    "Pune",
+    "Nagpur"
+  ],
+  "Other": [
+    "Other City"
+  ]
+}

@@ -1,0 +1,136 @@
+### Base Variables
+@baseUrl = http://localhost:4000/api/v1
+@contentType = application/json
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. User Login (Customer)
+# @name userLogin
+POST {{baseUrl}}/auth/user/login
+Content-Type: {{contentType}}
+
+{
+  "phone": "9390075877",
+  "password": "sai@1398"
+}
+
+### Store User Access Token
+@userToken = {{userLogin.response.body.data.accessToken}}
+
+### 3. Vendor Login
+# @name vendorLogin
+POST {{baseUrl}}/auth/vendor/login
+Content-Type: {{contentType}}
+
+{
+  "identifier": "sai_halls",
+  "password": "Vedika@123"
+}
+
+### Store Vendor Access Token
+@vendorToken = {{vendorLogin.response.body.data.accessToken}}
+
+### 4. Smart AI Plan Calculation (Stateless)
+POST {{baseUrl}}/planner
+Content-Type: {{contentType}}
+
+{
+  "eventType": "wedding",
+  "totalBudget": 800000,
+  "guestCount": 600,
+  "city": "Kadapa",
+  "days": 1
+}
+
+### 5. Browse Vendors in Kadapa
+GET {{baseUrl}}/vendors?city=Kadapa&kind=hall
+
+### 6. Get Branch Details (Privacy Protected)
+GET {{baseUrl}}/vendors/br_sai_classic
+
+### 7. Calculate Pricing Quote
+POST {{baseUrl}}/bookings/quote
+Content-Type: {{contentType}}
+
+{
+  "branchId": "br_sai_classic",
+  "startDate": "2026-12-15",
+  "endDate": "2026-12-15",
+  "slot": "full_day",
+  "guests": 600
+}
+
+### 8. Create Booking (15-Minute Hold Lock)
+# @name createBooking
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{userToken}}
+Content-Type: {{contentType}}
+
+{
+  "branchId": "br_sai_classic",
+  "eventType": "wedding",
+  "startDate": "2026-12-15",
+  "endDate": "2026-12-15",
+  "slot": "full_day",
+  "guests": 600
+}
+
+### Store Booking ID
+@bookingId = {{createBooking.response.body.data.id}}
+
+### 9. Create Payment Order
+POST {{baseUrl}}/payments/create-order
+Authorization: Bearer {{userToken}}
+Content-Type: {{contentType}}
+
+{
+  "bookingId": "{{bookingId}}"
+}
+
+### 10. Confirm Payment
+POST {{baseUrl}}/payments/confirm
+Authorization: Bearer {{userToken}}
+Content-Type: {{contentType}}
+
+{
+  "bookingId": "{{bookingId}}",
+  "providerOrderId": "order_mock_123",
+  "providerPaymentId": "pay_mock_123",
+  "method": "upi"
+}
+
+### 11. Test Chat - Clean Message (Allowed)
+POST {{baseUrl}}/chat/conversations/conv_demo_1/messages
+Authorization: Bearer {{userToken}}
+Content-Type: {{contentType}}
+
+{
+  "body": "The function hall looks great. Is parking available for 50 cars?"
+}
+
+### 12. Test Chat - Contact Guard (Blocked: Returns 422)
+POST {{baseUrl}}/chat/conversations/conv_demo_1/messages
+Authorization: Bearer {{userToken}}
+Content-Type: {{contentType}}
+
+{
+  "body": "Please call me directly on 9849012345 to discuss discount"
+}
+
+### 13. Initiate Masked In-App Call
+POST {{baseUrl}}/calls/initiate
+Authorization: Bearer {{userToken}}
+Content-Type: {{contentType}}
+
+{
+  "conversationId": "conv_demo_1"
+}
+
+### 14. Vendor Revenue Summary & Analytics
+GET {{baseUrl}}/vendor/revenue/summary
+Authorization: Bearer {{vendorToken}}
+
+### 15. Vendor 12-Month Historical Revenue Series
+GET {{baseUrl}}/vendor/revenue/series?months=12
+Authorization: Bearer {{vendorToken}}

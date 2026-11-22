@@ -1,0 +1,1 @@
+export { default } from '../modules/planner-bookings-pay/payments.routes.js';
