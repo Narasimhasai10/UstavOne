@@ -30,7 +30,7 @@ export default function DashboardEventChips({
                       fontWeight: isSelected ? 700 : 500
                     }}
                     aria-pressed={isSelected}
-                    onClick={() => handleSelectEvent(i)}
+                    onClick={() => onSelectEvent(i)}
                   >
                     <span>{ev.emoji}</span> {ev.name}
                   </button>

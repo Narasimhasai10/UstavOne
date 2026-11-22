@@ -1,9 +1,9 @@
 /**
  * Place Filter Persistence Service
- * Manages customer district filter in sessionStorage under key 'vedika_place_filter'
+ * Manages customer district filter in sessionStorage under key 'utsavora_place_filter'
  */
 
-const STORAGE_KEY = 'vedika_place_filter';
+const STORAGE_KEY = 'utsavora_place_filter';
 
 export function getStoredPlaceFilter() {
   try {

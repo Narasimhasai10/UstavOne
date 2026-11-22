@@ -8,7 +8,8 @@ import {
   createVendorAccount,
   isUsernameTaken,
   seedTestVendor,
-  dataService
+  dataService,
+  syncBrowserPhotosToBackend
 } from '../../shared/data-service/index.js';
 import { verifyDocument, VERIFICATION_STATUSES } from '../../shared/utils/verify.js';
 
@@ -227,6 +228,7 @@ export default function AuthModal({
     const res = await authenticateVendor(vendorLoginUsername, vendorLoginPassword);
     if (res.success) {
       const targetVendor = res.vendor;
+      syncBrowserPhotosToBackend(targetVendor.username);
       if (onVendorLoginSuccess) onVendorLoginSuccess(targetVendor);
       else if (onLoginSuccess) onLoginSuccess(targetVendor);
       onClose();
@@ -715,7 +717,7 @@ export default function AuthModal({
                       id="vendor-login-password"
                       type={showVendorLoginPassword ? 'text' : 'password'}
                       className={`vedika-input ${errors.vendorLoginPassword ? 'has-error' : ''}`}
-                      placeholder="Your password (e.g. Vedika@123)"
+                      placeholder="Your password (e.g. Utsavora@123)"
                       value={vendorLoginPassword}
                       onChange={(e) => setVendorLoginPassword(e.target.value)}
                     />
@@ -736,7 +738,7 @@ export default function AuthModal({
                   </button>
                   {forgotDemoMsg && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--leaf)', marginTop: '4px' }}>
-                      Demo: Default test vendor is <b>sai_halls</b> / <b>Vedika@123</b>
+                      Demo: Default test vendor is <b>sai_halls</b> / <b>Utsavora@123</b>
                     </div>
                   )}
                 </div>
@@ -777,7 +779,7 @@ export default function AuthModal({
                       What do you own?
                     </h3>
                     <p style={{ fontSize: '0.86rem', color: 'var(--muted)', marginBottom: '16px' }}>
-                      Choose the celebration services you provide on UstavOne.
+                      Choose the celebration services you provide on Utsavora.
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1037,7 +1039,7 @@ export default function AuthModal({
                 {vendorStep === 4 && (
                   <div>
                     <h3 style={{ fontFamily: 'Yatra One', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      Verified by UstavOne AI (pre-check)
+                      Verified by Utsavora AI (pre-check)
                     </h3>
                     <p style={{ fontSize: '0.84rem', color: 'var(--muted)', marginBottom: '16px' }}>
                       Automated security validation of licence numbers and document clarity.
@@ -1142,7 +1144,7 @@ export default function AuthModal({
                       Partner Agreement
                     </h3>
                     <p style={{ fontSize: '0.86rem', color: 'var(--muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                      UstavOne connects you with genuine customers while handling customer payments and date scheduling.
+                      Utsavora connects you with genuine customers while handling customer payments and date scheduling.
                     </p>
 
                     <div

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatINR } from './engine/planner.js';
 import BranchPhotoPlaceholder from './BranchPhotoPlaceholder.jsx';
+import SafeImage from '../../shared/components/SafeImage.jsx';
 import { resolvePhotoUrls } from '../../shared/utils/photos.js';
 import { getVendorPreviousWorks, getCurrentUser } from '../../shared/data-service/index.js';
 import { unreadCountForCustomer, subscribeChat } from '../booking-chat/chatStore.js';
@@ -52,13 +53,13 @@ export default function VendorDetailPage({
   // Vendor photos: only real photos uploaded by the vendor, never stock photos
   const rawPhotos = Array.isArray(vendor.photos)
     ? vendor.photos.map((p, i) => {
-        const url = typeof p === 'string' ? p : (p.url || p.path || (p.fileId ? `/api/v1/files/${p.fileId}` : ''));
-        return {
-          id: p.id || i,
-          url,
-          caption: p.caption || `Photo ${i + 1}`
-        };
-      }).filter(p => Boolean(p.url))
+      const url = typeof p === 'string' ? p : (p.url || p.path || (p.fileId ? `/api/v1/files/${p.fileId}` : ''));
+      return {
+        id: p.id || i,
+        url,
+        caption: p.caption || `Photo ${i + 1}`
+      };
+    }).filter(p => Boolean(p.url))
     : [];
 
   const [displayPhotos, setDisplayPhotos] = useState(rawPhotos);
@@ -118,7 +119,7 @@ export default function VendorDetailPage({
         try {
           const stored = await Promise.resolve(getVendorPreviousWorks(vendor.vendorUsername));
           worksList = (Array.isArray(stored) ? stored : []).filter(w => !w.branchId || w.branchId === vendor.id);
-        } catch {}
+        } catch { }
       }
 
       if (worksList.length > 0) {
@@ -135,10 +136,12 @@ export default function VendorDetailPage({
       loadWorks();
     };
 
+    window.addEventListener('utsavora:catalog-changed', handleCatalogChanged);
     window.addEventListener('vedika:catalog-changed', handleCatalogChanged);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('utsavora:catalog-changed', handleCatalogChanged);
       window.removeEventListener('vedika:catalog-changed', handleCatalogChanged);
     };
   }, [vendor]);
@@ -209,9 +212,10 @@ export default function VendorDetailPage({
                   boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
                 }}
               >
-                <img
+                <SafeImage
                   src={displayPhotos[activePhotoIdx]?.url}
                   alt={displayPhotos[activePhotoIdx]?.caption || vendor.name}
+                  kind={isHall ? 'hall' : (isCaterer ? 'caterer' : 'hall')}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
                 <span style={{ position: 'absolute', bottom: '14px', right: '16px', background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: '0.85rem', padding: '5px 12px', borderRadius: '99px' }}>
@@ -243,9 +247,10 @@ export default function VendorDetailPage({
                       padding: 0
                     }}
                   >
-                    <img
+                    <SafeImage
                       src={p.url}
                       alt={p.caption || `Thumbnail ${idx + 1}`}
+                      kind={isHall ? 'hall' : (isCaterer ? 'caterer' : 'hall')}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </button>
@@ -522,9 +527,10 @@ export default function VendorDetailPage({
                       }}
                     >
                       <div style={{ position: 'relative', width: '100%', height: '140px' }}>
-                        <img
+                        <SafeImage
                           src={cover}
                           alt={work.title || `Work ${idx + 1}`}
+                          kind={isHall ? 'hall' : (isCaterer ? 'caterer' : 'hall')}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                         {work.photos.length > 1 && (
@@ -742,9 +748,10 @@ export default function VendorDetailPage({
               alignItems: 'center'
             }}
           >
-            <img
+            <SafeImage
               src={displayPhotos[activePhotoIdx]?.url}
               alt={displayPhotos[activePhotoIdx]?.caption || vendor.name}
+              kind={isHall ? 'hall' : (isCaterer ? 'caterer' : 'hall')}
               style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }}
             />
             <button
@@ -823,9 +830,10 @@ export default function VendorDetailPage({
               alignItems: 'center'
             }}
           >
-            <img
+            <SafeImage
               src={activeWorkGallery.photos[activeWorkGallery.currentIdx]?.url}
               alt={activeWorkGallery.work?.title || 'Work photo'}
+              kind={isHall ? 'hall' : (isCaterer ? 'caterer' : 'hall')}
               style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', background: '#000' }}
             />
             {/* Close Button */}

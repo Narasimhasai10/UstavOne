@@ -52,7 +52,7 @@ export default function TermsModal({ isOpen, onClose }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid var(--line)', paddingBottom: '12px' }}>
           <h3 style={{ fontFamily: 'Yatra One', fontSize: '1.3rem', margin: 0, color: 'var(--ink)' }}>
-            UstavOne Vendor Terms and Conditions
+            Utsavora Vendor Terms and Conditions
           </h3>
           <button
             type="button"
@@ -76,10 +76,10 @@ export default function TermsModal({ isOpen, onClose }) {
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px', fontSize: '0.88rem', lineHeight: '1.6' }}>
           <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '12px', margin: 0 }}>
             <li>
-              All bookings and payments must happen through UstavOne. Do not take customers off the app.
+              All bookings and payments must happen through Utsavora. Do not take customers off the app.
             </li>
             <li>
-              <strong>Do not share your personal contact details</strong> (phone number, WhatsApp, email, social media or UPI ID) with customers in chats, calls, photos or documents. Sharing personal contact violates these terms, and you will face the consequences: a warning, suspension of your listings, withheld payouts and permanent removal from UstavOne. Commission is still charged on any booking taken outside the app.
+              <strong>Do not share your personal contact details</strong> (phone number, WhatsApp, email, social media or UPI ID) with customers in chats, calls, photos or documents. Sharing personal contact violates these terms, and you will face the consequences: a warning, suspension of your listings, withheld payouts and permanent removal from Utsavora. Commission is still charged on any booking taken outside the app.
             </li>
             <li>
               Upload only genuine documents and your own work photos. Fake documents or photos lead to a permanent ban and possible legal action.
@@ -91,7 +91,7 @@ export default function TermsModal({ isOpen, onClose }) {
               Honour every confirmed booking. Repeated vendor cancellations reduce your rating and visibility, and refunds to the customer are your responsibility.
             </li>
             <li>
-              UstavOne charges a 10% commission on each completed booking. Payouts are sent after the event is completed.
+              Utsavora charges a 10% commission on each completed booking. Payouts are sent after the event is completed.
             </li>
             <li>
               Reviews must be real. Buying, faking or removing reviews is not allowed.
@@ -103,7 +103,7 @@ export default function TermsModal({ isOpen, onClose }) {
               Treat customers with respect. Customer data may only be used for the booking.
             </li>
             <li>
-              UstavOne may suspend or remove an account that breaks these terms.
+              Utsavora may suspend or remove an account that breaks these terms.
             </li>
           </ol>
           <p style={{ marginTop: '18px', fontSize: '0.76rem', color: 'var(--muted)', fontStyle: 'italic', borderTop: '1px dashed var(--line)', paddingTop: '10px' }}>

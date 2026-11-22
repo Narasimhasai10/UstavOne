@@ -72,7 +72,7 @@ export default function HomePage({
 
   // Set page title
   useEffect(() => {
-    document.title = "UstavOne – Plan any event within your budget";
+    document.title = "Utsavora – Plan any event within your budget";
   }, []);
 
   // Set CSS variable --acc on the root document to sync with the current event
@@ -130,16 +130,16 @@ export default function HomePage({
           ===================================================================== */}
       <header className="vedika-sticky-header">
         {/* Left: Logo */}
-        <a href="#top" className="vedika-header-logo" aria-label="UstavOne Home">
+        <a href="#top" className="vedika-header-logo" aria-label="Utsavora Home">
           <span className="vedika-logo-circle" aria-hidden="true" />
-          <span className="vedika-logo-title">UstavOne</span>
+          <span className="vedika-logo-title">Utsavora</span>
         </a>
 
         {/* Centre Nav (hidden below 820px) */}
         <nav className="vedika-header-nav" aria-label="Main navigation">
           <a href="#types" onClick={(e) => scrollToSection(e, '#types')}>Events</a>
           <a href="#how" onClick={(e) => scrollToSection(e, '#how')}>How it works</a>
-          <a href="#why" onClick={(e) => scrollToSection(e, '#why')}>Why UstavOne</a>
+          <a href="#why" onClick={(e) => scrollToSection(e, '#why')}>Why Utsavora</a>
           <a href="#love" onClick={(e) => scrollToSection(e, '#love')}>Reviews</a>
         </nav>
 
@@ -411,7 +411,7 @@ export default function HomePage({
           <div className="step-card">
             <span className="step-number">3</span>
             <h3>Chat and call in the app</h3>
-            <p>Talk to venues and caterers safely, inside UstavOne.</p>
+            <p>Talk to venues and caterers safely, inside Utsavora.</p>
           </div>
 
           <div className="step-card">
@@ -423,10 +423,10 @@ export default function HomePage({
       </section>
 
       {/* =====================================================================
-          PART 2 - E) WHY VEDIKA (id="why")
+          PART 2 - E) WHY UTSAVORA (id="why")
           ===================================================================== */}
       <section className="vedika-section centred-section" id="why">
-        <h2>Why people plan with UstavOne</h2>
+        <h2>Why people plan with Utsavora</h2>
         <p className="sub">
           Made for families who want a great event at a fair price.
         </p>
@@ -649,7 +649,7 @@ export default function HomePage({
           ===================================================================== */}
       <footer className="vedika-home-footer">
         <p>
-          &copy; {new Date().getFullYear()} UstavOne &middot; Plan any event within your budget. All rights reserved.
+          &copy; {new Date().getFullYear()} Utsavora &middot; Plan any event within your budget. All rights reserved.
         </p>
       </footer>
     </div>

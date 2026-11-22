@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatINR } from './engine/planner.js';
 
 export default function DashboardFormPanel({
   budget,

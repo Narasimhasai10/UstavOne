@@ -117,7 +117,7 @@ export const PLANNER_CONFIG = {
 
   // Vendor Portal Configuration
   vendor: {
-    commissionRate: 0.10, // 10% Vedika commission
+    commissionRate: 0.10, // 10% Utsavora commission
     warningLimit: 3, // 3 contact violations flags account
     maxPhotosPerBranch: 12,
     maxFileSizeMB: 5,

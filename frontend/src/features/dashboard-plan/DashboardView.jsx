@@ -9,6 +9,11 @@ import PLANNER_CONFIG from './engine/config.js';
 import { saveUserPlan, getSelectedEvent, setSelectedEvent, getUnifiedVendorsCatalog } from '../../shared/data-service/index.js';
 import { applyThemeColors, onColor, getLuminance, getContrastRatio } from '../../shared/utils/contrastUtils.js';
 import { getStoredPlaceFilter, setStoredPlaceFilter, clearStoredPlaceFilter } from './placeFilter.js';
+import DashboardEventChips from './DashboardEventChips.jsx';
+import DashboardFormPanel from './DashboardFormPanel.jsx';
+import DashboardPlanPanel from './DashboardPlanPanel.jsx';
+import DashboardVendorsCatalog from './DashboardVendorsCatalog.jsx';
+import DashboardLocationModal from './DashboardLocationModal.jsx';
 
 const TAB_CONFIG = {
   H: { label: 'Function halls', icon: '🏛' },
@@ -76,7 +81,7 @@ export default function DashboardView({
     return user.name.trim().split(/\s+/)[0] || 'Friend';
   }, [user]);
 
-  // Event Selection (Persisted in localStorage as "vedika.event", defaults to "wedding")
+  // Event Selection (Persisted in localStorage as "utsavora.event", defaults to "wedding")
   // 7 core events, removing "And more" from chips and subtitle
   const events = useMemo(() => EVENT_TYPES.filter(e => e.id !== 'andmore' && e.name !== 'And more'), []);
   const [selectedEventId, setSelectedEventIdState] = useState(() => {
@@ -147,7 +152,7 @@ export default function DashboardView({
   // Restored Full Vendor List Below AI Plan
   const [lowerActiveTab, setLowerActiveTab] = useState(() => {
     try {
-      const saved = sessionStorage.getItem('vedika_dashboard_tab');
+      const saved = sessionStorage.getItem('utsavora_dashboard_tab') || sessionStorage.getItem('vedika_dashboard_tab');
       if (saved && (saved === 'H' || saved === 'C' || saved === 'X')) return saved;
     } catch {}
     return 'H';
@@ -170,14 +175,14 @@ export default function DashboardView({
   // Sync lowerActiveTab to sessionStorage
   useEffect(() => {
     try {
-      sessionStorage.setItem('vedika_dashboard_tab', lowerActiveTab);
+      sessionStorage.setItem('utsavora_dashboard_tab', lowerActiveTab);
     } catch {}
   }, [lowerActiveTab]);
 
   // Restore scroll position if returning from vendor detail
   useEffect(() => {
     try {
-      const savedScroll = sessionStorage.getItem('vedika_dashboard_scroll');
+      const savedScroll = sessionStorage.getItem('utsavora_dashboard_scroll') || sessionStorage.getItem('vedika_dashboard_scroll');
       if (savedScroll) {
         const pos = parseInt(savedScroll, 10);
         if (!isNaN(pos) && pos > 0) {
@@ -191,7 +196,7 @@ export default function DashboardView({
 
   const handleVendorCardClick = (v) => {
     try {
-      sessionStorage.setItem('vedika_dashboard_scroll', String(window.scrollY || window.pageYOffset || 0));
+      sessionStorage.setItem('utsavora_dashboard_scroll', String(window.scrollY || window.pageYOffset || 0));
     } catch {}
     if (onSelectVendor) onSelectVendor(v);
   };
@@ -835,6 +840,7 @@ export default function DashboardView({
           isBooked: booked,
           notFitLabel,
           pickReason,
+          coverPhotoUrl: h.coverPhotoUrl || h.coverPhoto || h.photos?.[0]?.url || (typeof h.photos?.[0] === 'string' ? h.photos[0] : null),
           raw: h
         };
       });
@@ -1103,14 +1109,6 @@ export default function DashboardView({
           </p>
         </div>
 
-        {/* 7 Event Chips */}
-import DashboardEventChips from './DashboardEventChips.jsx';
-import DashboardFormPanel from './DashboardFormPanel.jsx';
-import DashboardPlanPanel from './DashboardPlanPanel.jsx';
-import DashboardVendorsCatalog from './DashboardVendorsCatalog.jsx';
-import DashboardLocationModal from './DashboardLocationModal.jsx';
-
-        {/* 7 Event Chips */}
         <DashboardEventChips
           events={events}
           selectedEventIndex={selectedEventIndex}
@@ -1218,6 +1216,7 @@ import DashboardLocationModal from './DashboardLocationModal.jsx';
           placePopoverRef={placePopoverRef}
           districtsData={districtsData}
           displayedVendorList={displayedVendorList}
+          serviceNeed={serviceNeed}
           handleVendorCardClick={handleVendorCardClick}
           onOpenChat={onOpenChat}
           onOpenBook={onOpenBook}
@@ -1225,7 +1224,7 @@ import DashboardLocationModal from './DashboardLocationModal.jsx';
 
         {/* Footer */}
         <footer>
-          UstavOne · Design preview. Names, prices and ratings are placeholders.
+          Utsavora · Design preview. Names, prices and ratings are placeholders.
         </footer>
       </div>
 

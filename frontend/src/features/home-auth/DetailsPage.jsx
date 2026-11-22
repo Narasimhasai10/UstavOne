@@ -267,7 +267,7 @@ export default function DetailsPage({
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f8ebd8' }}>Profile Photo</div>
             <div style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '4px 0 10px' }}>
-              Upload your photo to personalize your UstavOne experience.
+              Upload your photo to personalize your Utsavora experience.
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>

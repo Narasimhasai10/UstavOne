@@ -17,6 +17,7 @@ export default function DashboardPlanPanel({
   planPanelTabs,
   currentPlanTop3,
   planExpandedPickId,
+  setPlanExpandedPickId,
   selectedHallPick,
   selectedCateringPick,
   selectedDecorPick,
@@ -125,6 +126,9 @@ export default function DashboardPlanPanel({
                     </div>
     
                     {/* 3-tab switch: Budget-friendly / Balanced / Premium */}
+                    {(() => {
+                      const activePackage = planResult?.packages?.[selectedPackageName] || planResult?.packages?.Standard || planResult?.packages?.['Balanced'];
+                      return (
                     <div style={{ marginTop: '16px' }}>
                       <div className="seg" style={{ background: '#ffffff22', padding: '4px', borderRadius: '12px' }}>
                         {['Budget-friendly', 'Balanced', 'Premium'].map(pkgName => {
@@ -152,6 +156,8 @@ export default function DashboardPlanPanel({
                         <span style={{ color: 'var(--gold)' }}>{formatINR(activePackage?.remaining)} left</span>
                       </div>
                     </div>
+                      );
+                    })()}
     
                     {/* Note box with aria-live */}
                     <div className="note" aria-live="polite">

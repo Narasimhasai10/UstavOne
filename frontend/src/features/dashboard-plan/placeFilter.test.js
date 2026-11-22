@@ -25,14 +25,14 @@ describe('Place Filter Persistence & Deselection Tests', () => {
     assert.deepStrictEqual(filter, { state: null, district: null });
   });
 
-  it('2. Stores and retrieves place filter correctly under vedika_place_filter', () => {
+  it('2. Stores and retrieves place filter correctly under utsavora_place_filter', () => {
     setStoredPlaceFilter({ state: 'Andhra Pradesh', district: 'YSR Kadapa' });
     const stored = getStoredPlaceFilter();
     assert.strictEqual(stored.state, 'Andhra Pradesh');
     assert.strictEqual(stored.district, 'YSR Kadapa');
 
     // Verify key in sessionStorage
-    const raw = globalThis.sessionStorage.getItem('vedika_place_filter');
+    const raw = globalThis.sessionStorage.getItem('utsavora_place_filter');
     assert.ok(raw);
     const parsed = JSON.parse(raw);
     assert.strictEqual(parsed.district, 'YSR Kadapa');
@@ -44,7 +44,7 @@ describe('Place Filter Persistence & Deselection Tests', () => {
 
     clearStoredPlaceFilter();
     assert.deepStrictEqual(getStoredPlaceFilter(), { state: null, district: null });
-    assert.strictEqual(globalThis.sessionStorage.getItem('vedika_place_filter'), null);
+    assert.strictEqual(globalThis.sessionStorage.getItem('utsavora_place_filter'), null);
   });
 
   it('4. Toggle deselect logic: clicking same district deselects, clicking new district switches', () => {

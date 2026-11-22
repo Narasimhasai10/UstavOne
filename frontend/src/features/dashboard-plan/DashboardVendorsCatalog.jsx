@@ -1,4 +1,5 @@
 import React from 'react';
+import SafeImage from '../../shared/components/SafeImage.jsx';
 
 export default function DashboardVendorsCatalog({
   userCity,
@@ -23,12 +24,14 @@ export default function DashboardVendorsCatalog({
   placePopoverRef,
   districtsData,
   displayedVendorList,
+  serviceNeed,
   handleVendorCardClick,
   onOpenChat,
   onOpenBook
 }) {
   return (
-            <div className="bar" style={{ marginTop: '36px' }}>
+    <>
+      <div className="bar" style={{ marginTop: '36px' }}>
               <h2>Picked for you in {userCity}</h2>
               <div className="tabs" role="tablist" aria-label="Vendor categories">
                 {Object.keys(TAB_CONFIG).map((k) => (
@@ -357,11 +360,27 @@ export default function DashboardVendorsCatalog({
                         overflow: 'hidden'
                       }}
                     >
-                      <div style={{ textAlign: 'center', color: '#FFE7B0', padding: '12px', zIndex: 1 }}>
-                        <div style={{ fontSize: '2.5rem' }}>
-                          {TAB_CONFIG[lowerActiveTab]?.icon || (vendor.type === 'caterer' ? '🍽️' : '🏛️')}
+                      {(vendor.coverPhotoUrl || vendor.raw?.coverPhotoUrl || vendor.raw?.coverPhoto || vendor.raw?.photos?.[0]?.url) ? (
+                        <SafeImage
+                          src={vendor.coverPhotoUrl || vendor.raw?.coverPhotoUrl || vendor.raw?.coverPhoto || vendor.raw?.photos?.[0]?.url}
+                          alt={vendor.name}
+                          kind={vendor.type === 'caterer' ? 'caterer' : 'hall'}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{ textAlign: 'center', color: '#FFE7B0', padding: '12px', zIndex: 1 }}>
+                          <div style={{ fontSize: '2.5rem' }}>
+                            {TAB_CONFIG[lowerActiveTab]?.icon || (vendor.type === 'caterer' ? '🍽️' : '🏛️')}
+                          </div>
                         </div>
-                      </div>
+                      )}
                       {/* Tier tag with dark scrim behind text for contrast */}
                       <span className="t" style={{ background: 'rgba(0,0,0,0.72)', color: '#ffffff', fontWeight: 600 }}>
                         {vendor.tier}
@@ -442,5 +461,6 @@ export default function DashboardVendorsCatalog({
                 </div>
               )}
             </div>
+    </>
   );
 }

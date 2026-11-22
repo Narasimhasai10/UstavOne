@@ -631,7 +631,7 @@ export default function PlanResult({
               <p><strong>Estimated Price:</strong> {formatINR(viewDetailsVendor.price || viewDetailsVendor.totalCalculatedPrice)}</p>
               {viewDetailsVendor.capacity && <p><strong>Capacity:</strong> {viewDetailsVendor.capacity} guests</p>}
               {viewDetailsVendor.desc && <p><strong>Details:</strong> {viewDetailsVendor.desc}</p>}
-              <p><strong>Verified Partner:</strong> 100% genuine ratings verified by UstavOne event concierges.</p>
+              <p><strong>Verified Partner:</strong> 100% genuine ratings verified by Utsavora event concierges.</p>
             </div>
             <button
               type="button"
@@ -671,7 +671,7 @@ export default function PlanResult({
                   Request Booking for {eventDisplayName} Plan
                 </h3>
                 <p className="auth-subtext">
-                  Our dedicated UstavOne concierge locks dates with all vendors for free.
+                  Our dedicated Utsavora concierge locks dates with all vendors for free.
                 </p>
 
                 <form
