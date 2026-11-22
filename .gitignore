@@ -11,3 +11,4 @@ coverage/
 VEDIKA-export.zip
 .test-cache/
 frontend/src/.test-cache/
+/index.html
