@@ -129,7 +129,7 @@ router.post("/", requireAuth, async (req, res, next) => {
       });
 
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const code = `VED-${new Date().getFullYear()}-${randomSuffix}`;
+      const code = `UTS-${new Date().getFullYear()}-${randomSuffix}`;
       const holdExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins hold
 
       // 4. Create Booking
