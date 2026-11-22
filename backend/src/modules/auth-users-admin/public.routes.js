@@ -53,9 +53,9 @@ router.get('/events', (req, res) => {
 router.get('/terms/vendor', (req, res) => {
   res.json({
     version: 'v1.0',
-    title: 'UstavOne Vendor Terms & Platform Guidelines',
+    title: 'Utsavora Vendor Terms & Platform Guidelines',
     items: [
-      { id: 1, text: 'All bookings and payments must happen through UstavOne.' },
+      { id: 1, text: 'All bookings and payments must happen through Utsavora.' },
       { id: 2, text: 'Do not share personal contact details (phone, WhatsApp, email, social media, UPI ID) in chats, calls, photos or documents; violating this leads to a warning, suspended listings, withheld payouts and permanent removal, and commission is still charged on bookings taken outside the app.' },
       { id: 3, text: 'Upload only genuine documents and your own work photos.' },
       { id: 4, text: 'Keep prices, capacity, availability and details accurate.' },
@@ -64,7 +64,7 @@ router.get('/terms/vendor', (req, res) => {
       { id: 7, text: 'Reviews must be real.' },
       { id: 8, text: 'Caterers must keep a valid FSSAI licence; halls must follow fire and safety rules.' },
       { id: 9, text: 'Customer data may only be used for the booking.' },
-      { id: 10, text: 'UstavOne may suspend or remove accounts that break these terms.' }
+      { id: 10, text: 'Utsavora may suspend or remove accounts that break these terms.' }
     ]
   });
 });

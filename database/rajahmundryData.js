@@ -30,7 +30,7 @@ export const RAJAHMUNDRY_VENDORS = [
     cateringBusinessName: 'BVR Sri Convention',
     ownerType: 'both',
     phone: '9000000001',
-    email: 'sri_convention@vedika.com',
+    email: 'sri_convention@utsavora.com',
     upiId: 'bvr.sri@okaxis',
     tradeLicenceNumber: 'TL-RJY-2024-9001',
     fssaiNumber: '10123004009001'
@@ -44,7 +44,7 @@ export const RAJAHMUNDRY_VENDORS = [
     cateringBusinessName: 'SVPC Conventions',
     ownerType: 'both',
     phone: '9000000002',
-    email: 'svpc_halls@vedika.com',
+    email: 'svpc_halls@utsavora.com',
     upiId: 'svpc.conventions@okaxis',
     tradeLicenceNumber: 'TL-RJY-2024-9002',
     fssaiNumber: '10123004009002'
@@ -58,7 +58,7 @@ export const RAJAHMUNDRY_VENDORS = [
     cateringBusinessName: null,
     ownerType: 'hall',
     phone: '9000000003',
-    email: 'sreeb_hall@vedika.com',
+    email: 'sreeb_hall@utsavora.com',
     upiId: 'sreerastu@okaxis',
     tradeLicenceNumber: 'TL-RJY-2024-9003',
     fssaiNumber: null
@@ -72,7 +72,7 @@ export const RAJAHMUNDRY_VENDORS = [
     cateringBusinessName: 'Sai Annapurna Catering Services',
     ownerType: 'catering',
     phone: '9000000004',
-    email: 'sai_caterings@vedika.com',
+    email: 'sai_caterings@utsavora.com',
     upiId: 'sai.annapurna@okaxis',
     tradeLicenceNumber: null,
     fssaiNumber: '10123004009004'
@@ -86,7 +86,7 @@ export const RAJAHMUNDRY_VENDORS = [
     cateringBusinessName: 'Emmi Catering',
     ownerType: 'catering',
     phone: '9000000005',
-    email: 'emmi_caterings@vedika.com',
+    email: 'emmi_caterings@utsavora.com',
     upiId: 'emmi.catering@okaxis',
     tradeLicenceNumber: null,
     fssaiNumber: '10123004009005'
@@ -100,7 +100,7 @@ export const RAJAHMUNDRY_VENDORS = [
     cateringBusinessName: 'Ramya Caterings and Wedding Planners',
     ownerType: 'catering',
     phone: '9000000006',
-    email: 'ramya_caterings@vedika.com',
+    email: 'ramya_caterings@utsavora.com',
     upiId: 'ramya.caterings@okaxis',
     tradeLicenceNumber: null,
     fssaiNumber: '10123004009006'

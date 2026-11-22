@@ -70,7 +70,7 @@ const DEMO_OWNER_NAMES = [
 
 function generateSvgImage({ title, emoji, caption, filename, uploadsDir }) {
   const filePath = path.join(uploadsDir, filename);
-  const cleanTitle = (title || 'Vedika Venue').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cleanTitle = (title || 'Utsavora Venue').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const cleanCaption = (caption || 'Verified Partner').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
   <defs>
@@ -280,10 +280,10 @@ export async function seedDatabase(targetPrisma = prisma) {
       role: 'admin'
     },
     create: {
-      name: 'Vedika Admin',
+      name: 'Utsavora Admin',
       username: 'admin',
       phone: '9000000000',
-      email: 'admin@vedika.com',
+      email: 'admin@utsavora.com',
       passwordHash: adminPasswordHash,
       role: 'admin',
       city: 'Kadapa',
@@ -312,7 +312,7 @@ export async function seedDatabase(targetPrisma = prisma) {
       city: 'Kadapa',
       state: 'Andhra Pradesh',
       phone: '9849012345',
-      email: 'sai.halls@vedika.com'
+      email: 'sai.halls@utsavora.com'
     }
   });
 
@@ -555,7 +555,7 @@ export async function seedDatabase(targetPrisma = prisma) {
       const ownerName = DEMO_OWNER_NAMES[(vendorCounter - 1) % DEMO_OWNER_NAMES.length];
       const existingUser = await targetPrisma.user.findUnique({ where: { username } });
       const phone = existingUser?.phone || `98491${String(vendorCounter).padStart(5, '0')}`;
-      const email = `${username}@vedika.com`;
+      const email = `${username}@utsavora.com`;
 
       const vendorUser = await targetPrisma.user.upsert({
         where: { username },
@@ -810,7 +810,7 @@ export async function seedDatabase(targetPrisma = prisma) {
     const bSvg = generateSvgImage({
       title: b.name,
       emoji: b.kind === 'hall' ? '🏛️' : '🍽️',
-      caption: 'Vedika Verified Partner',
+      caption: 'Utsavora Verified Partner',
       filename: `${b.id}-cover.svg`,
       uploadsDir
     });

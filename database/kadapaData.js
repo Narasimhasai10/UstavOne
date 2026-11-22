@@ -18,7 +18,7 @@ export const KADAPA_VENDORS = [
     cateringBusinessName: null,
     ownerType: 'hall',
     phone: '9000000011',
-    email: 'dsr_paradise@vedika.com',
+    email: 'dsr_paradise@utsavora.com',
     tradeLicenceNumber: 'TL-KDP-2024-9011'
   },
   {
@@ -29,7 +29,7 @@ export const KADAPA_VENDORS = [
     cateringBusinessName: null,
     ownerType: 'hall',
     phone: '9000000012',
-    email: 'madhavi_convention@vedika.com',
+    email: 'madhavi_convention@utsavora.com',
     tradeLicenceNumber: 'TL-KDP-2024-9012'
   },
   {
@@ -40,7 +40,7 @@ export const KADAPA_VENDORS = [
     cateringBusinessName: null,
     ownerType: 'hall',
     phone: '9000000013',
-    email: 'meda_reddy@vedika.com',
+    email: 'meda_reddy@utsavora.com',
     tradeLicenceNumber: 'TL-KDP-2024-9013'
   },
   {
@@ -51,7 +51,7 @@ export const KADAPA_VENDORS = [
     cateringBusinessName: 'Subhamasthu Catters',
     ownerType: 'catering',
     phone: '9000000014',
-    email: 'subhamasthu_catters@vedika.com',
+    email: 'subhamasthu_catters@utsavora.com',
     fssaiNumber: '10123004009014'
   },
   {
@@ -62,7 +62,7 @@ export const KADAPA_VENDORS = [
     cateringBusinessName: 'KS Catterings',
     ownerType: 'catering',
     phone: '9000000015',
-    email: 'ks_cattering@vedika.com',
+    email: 'ks_cattering@utsavora.com',
     fssaiNumber: '10123004009015'
   },
   {
@@ -73,7 +73,7 @@ export const KADAPA_VENDORS = [
     cateringBusinessName: 'Maharaja Catering',
     ownerType: 'catering',
     phone: '9000000016',
-    email: 'maharaja@vedika.com',
+    email: 'maharaja@utsavora.com',
     fssaiNumber: '10123004009016'
   }
 ];
