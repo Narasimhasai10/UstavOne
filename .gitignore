@@ -16,3 +16,5 @@ frontend/src/.test-cache/
 scripts/fixtures/
 scripts/test-query.mjs
 scripts/test-reproduce-upload.mjs
+docs/DB-CHECK-REPORT.md
+data-export/

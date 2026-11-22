@@ -14,11 +14,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 26.13.1
       - key: PORT
         value: 10000
       - key: DATABASE_URL
         sync: false
         # Enter your Neon PostgreSQL connection string (postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require)
+      - key: DIRECT_URL
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: REFRESH_SECRET
