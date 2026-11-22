@@ -107,44 +107,48 @@ export const RAJAHMUNDRY_VENDORS = [
   }
 ];
 
-export async function seedRajahmundryVendorsAndBranches(targetPrisma, rajahmundryCity) {
+export async function seedRajahmundryVendorsAndBranches(targetPrisma, rajahmundryCity, options = {}) {
   console.log('-> Seeding Rajahmundry 6 vendors & 8 branches...');
 
   // STEP 1: Delete any stale old Rajahmundry halls and caterers
-  const oldBranches = await targetPrisma.branch.findMany({
-    where: {
-      cityId: rajahmundryCity.id,
-      kind: { in: ['hall', 'catering'] },
-      NOT: { id: { in: RAJAHMUNDRY_BRANCH_IDS } }
-    },
-    select: { id: true, vendorId: true }
-  });
+  if (options?.canRunDestructive) {
+    const oldBranches = await targetPrisma.branch.findMany({
+      where: {
+        cityId: rajahmundryCity.id,
+        kind: { in: ['hall', 'catering'] },
+        NOT: { id: { in: RAJAHMUNDRY_BRANCH_IDS } }
+      },
+      select: { id: true, vendorId: true }
+    });
 
-  if (oldBranches.length > 0) {
-    const oldBranchIds = oldBranches.map(b => b.id);
-    const oldVendorIds = Array.from(new Set(oldBranches.map(b => b.vendorId)));
-    await targetPrisma.hallDetails.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.catererDetails.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.plateRate.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.menuItem.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.photo.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.previousWork.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.availabilityBlock.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.bookingDate.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.review.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.booking.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.conversation.deleteMany({ where: { branchId: { in: oldBranchIds } } });
-    await targetPrisma.branch.deleteMany({ where: { id: { in: oldBranchIds } } });
+    if (oldBranches.length > 0) {
+      const oldBranchIds = oldBranches.map(b => b.id);
+      const oldVendorIds = Array.from(new Set(oldBranches.map(b => b.vendorId)));
+      await targetPrisma.hallDetails.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.catererDetails.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.plateRate.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.menuItem.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.photo.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.previousWork.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.availabilityBlock.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.bookingDate.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.review.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.booking.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.conversation.deleteMany({ where: { branchId: { in: oldBranchIds } } });
+      await targetPrisma.branch.deleteMany({ where: { id: { in: oldBranchIds } } });
 
-    for (const vId of oldVendorIds) {
-      const remaining = await targetPrisma.branch.count({ where: { vendorId: vId } });
-      if (remaining === 0) {
-        await targetPrisma.refreshToken.deleteMany({ where: { userId: vId } });
-        await targetPrisma.document.deleteMany({ where: { vendorId: vId } });
-        await targetPrisma.vendorProfile.deleteMany({ where: { userId: vId } });
-        await targetPrisma.user.deleteMany({ where: { id: vId } });
+      for (const vId of oldVendorIds) {
+        const remaining = await targetPrisma.branch.count({ where: { vendorId: vId } });
+        if (remaining === 0) {
+          await targetPrisma.refreshToken.deleteMany({ where: { userId: vId } });
+          await targetPrisma.document.deleteMany({ where: { vendorId: vId } });
+          await targetPrisma.vendorProfile.deleteMany({ where: { userId: vId } });
+          await targetPrisma.user.deleteMany({ where: { id: vId } });
+        }
       }
     }
+  } else {
+    console.log('[SKIP] destructive cleanup (pass --allow-destructive to enable)');
   }
 
   // STEP 2: Create the 6 Vendor Accounts
