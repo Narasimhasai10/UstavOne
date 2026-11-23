@@ -7,16 +7,16 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
-    "db:migrate": "npx prisma migrate dev --schema ../database/schema.prisma",
-    "db:push": "npx prisma db push --schema ../database/schema.prisma",
+    "db:migrate": "npx --no-install prisma migrate dev --schema ../database/schema.prisma",
+    "db:push": "npx --no-install prisma db push --schema ../database/schema.prisma",
     "db:deploy": "node ../scripts/db-deploy.mjs",
-    "db:generate": "npx prisma generate --schema ../database/schema.prisma",
+    "db:generate": "npx --no-install prisma generate --schema ../database/schema.prisma",
     "db:seed": "node ../database/seed.js",
     "db:seed:prod": "node ../scripts/db-seed-prod.mjs",
+    "check:prisma": "node -e \"const {PrismaClient}=require('@prisma/client'); new PrismaClient(); console.log('client ok')\"",
     "test": "node tests/runner.js"
   },
   "dependencies": {
-    "@prisma/client": "^6.4.1",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.11.0",
     "compression": "^1.8.2",
@@ -34,8 +34,5 @@
     "swagger-ui-express": "^5.0.1",
     "yaml": "^2.7.0",
     "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "prisma": "^6.4.1"
   }
 }

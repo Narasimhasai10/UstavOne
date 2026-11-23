@@ -73,10 +73,12 @@ console.log(`✅ [use-db] Successfully generated database/schema.prisma configur
 if (!skipGenerate) {
   console.log(`⏳ [use-db] Running "prisma generate" for ${provider}...`);
   try {
-    const prismaCliPath = path.resolve(rootDir, 'backend/node_modules/prisma/build/index.js');
+    const prismaCliPath = fs.existsSync(path.resolve(rootDir, 'node_modules/prisma/build/index.js'))
+      ? path.resolve(rootDir, 'node_modules/prisma/build/index.js')
+      : path.resolve(rootDir, 'backend/node_modules/prisma/build/index.js');
     const cmd = fs.existsSync(prismaCliPath)
       ? `node "${prismaCliPath}" generate --schema database/schema.prisma`
-      : 'npx prisma generate --schema database/schema.prisma';
+      : 'npx --no-install prisma generate --schema database/schema.prisma';
 
     execSync(cmd, {
       cwd: rootDir,
