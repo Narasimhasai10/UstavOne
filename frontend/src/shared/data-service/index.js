@@ -286,8 +286,13 @@ const vendorsDomain = {
 
     if (isLive()) {
       try {
-        const liveRes = await api.vendors.browse({ limit: 100 });
-        const liveBranches = liveRes?.items || [];
+        let liveBranches = [];
+        for (let page = 1; page <= 10; page++) {
+          const liveRes = await api.vendors.browse({ limit: 100, page });
+          const pageItems = Array.isArray(liveRes) ? liveRes : (liveRes?.items || []);
+          liveBranches = liveBranches.concat(pageItems);
+          if (pageItems.length < 100) break;
+        }
         for (const lb of liveBranches) {
           const targetList = lb.kind === 'catering' ? base.caterers : base.halls;
           const match = targetList.find(item =>
