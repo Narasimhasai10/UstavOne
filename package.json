@@ -12,12 +12,14 @@
     "start": "npm run start --prefix backend",
     "test": "npm test --prefix backend && npm test --prefix frontend",
     "check": "node scripts/check.mjs",
+    "check:prisma": "node -e \"const {PrismaClient}=require('@prisma/client'); new PrismaClient(); console.log('client ok')\"",
     "export": "node scripts/export.mjs",
     "verify": "node scripts/verify-all.mjs",
     "verify:all": "node scripts/verify-all-e2e.mjs",
     "db:check": "node scripts/db-check.mjs",
     "db:reset": "node scripts/db-reset.mjs",
     "db:backup": "node scripts/db-backup.mjs",
+    "db:generate": "npx --no-install prisma generate --schema database/schema.prisma",
     "db:use:sqlite": "node scripts/use-db.mjs sqlite",
     "db:use:postgres": "node scripts/use-db.mjs postgres",
     "db:deploy": "node scripts/db-deploy.mjs",
@@ -32,8 +34,12 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^17.14.0",
     "playwright": "^1.65.1",
+    "prisma": "^6.19.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^6.0.7"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
   }
 }

@@ -7,7 +7,7 @@ services:
     env: node
     plan: free
     region: oregon # or frankfurt, singapore, ohio
-    buildCommand: npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && node scripts/use-db.mjs postgres && npx prisma generate --schema database/schema.prisma && node scripts/db-deploy.mjs && node scripts/db-seed-prod.mjs
+    buildCommand: npm install --include=dev && npm install --include=dev --prefix backend && npm install --include=dev --prefix frontend && npm run build --prefix frontend && node scripts/use-db.mjs postgres && npx --no-install prisma generate --schema database/schema.prisma && node scripts/db-deploy.mjs && node scripts/db-seed-prod.mjs
     startCommand: npm run start --prefix backend
     healthCheckPath: /health
     autoDeploy: true

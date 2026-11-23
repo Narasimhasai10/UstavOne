@@ -1,4 +1,4 @@
-import { PrismaClient } from '../backend/node_modules/@prisma/client/default.js';
+import { PrismaClient } from '@prisma/client';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

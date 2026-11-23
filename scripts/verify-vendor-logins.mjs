@@ -1,5 +1,5 @@
 import bcrypt from '../backend/node_modules/bcryptjs/index.js';
-import { PrismaClient } from '../backend/node_modules/@prisma/client/index.js';
+import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import {
   SEEDED_RAJAHMUNDRY_VENDORS,

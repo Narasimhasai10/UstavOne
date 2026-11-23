@@ -1,4 +1,4 @@
-import { PrismaClient } from '../backend/node_modules/@prisma/client/default.js';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from '../backend/node_modules/bcryptjs/index.js';
 import fs from 'node:fs';
 import path from 'node:path';

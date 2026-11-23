@@ -1,4 +1,4 @@
-import { PrismaClient } from '../backend/node_modules/@prisma/client/index.js';
+import { PrismaClient } from '@prisma/client';
 import dummyVendors from '../frontend/src/data/dummyVendors.json' with { type: 'json' };
 import { getUnifiedVendorsCatalog, seedTestVendor } from '../frontend/src/services/store.js';
 

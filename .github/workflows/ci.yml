@@ -27,7 +27,7 @@ jobs:
         run: |
           npm install --prefix backend
           npm install --prefix frontend
-          npm run db:generate --prefix backend
+          npm run db:generate
 
       - name: Build Frontend & Standalone Distribution
         run: npm run build:standalone
@@ -40,6 +40,9 @@ jobs:
 
       - name: Run Code Integrity Check
         run: npm run check
+
+      - name: Check Prisma Client Initialization
+        run: npm run check:prisma
 
       - name: Run Backend Isolated Test Suite
         run: npm test --prefix backend

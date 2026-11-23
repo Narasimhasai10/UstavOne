@@ -2,7 +2,7 @@ import path from "node:path";
 import http from "node:http";
 import { Socket } from "node:net";
 import { fileURLToPath } from "node:url";
-import { PrismaClient } from "../backend/node_modules/@prisma/client/default.js";
+import { PrismaClient } from '@prisma/client';
 import app from "../backend/src/app.js";
 import { comparePassword } from "../backend/src/utils/crypto.js";
 
